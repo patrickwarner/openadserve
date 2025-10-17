@@ -1,0 +1,4 @@
+[
+  {"net":"192.0.2.0/24","country":"US","region":"CA"},
+  {"net":"198.51.100.0/24","country":"US","region":"NY"}
+]

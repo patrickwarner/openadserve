@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ad SDK Demo - Bootstrap</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"
+      integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <script src="/static/sdk/adsdk.js"></script>
+    <style>
+      .ad-placement {
+        border: 2px dashed #ccc;
+        padding: 10px;
+        margin: 1rem auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        text-align: center;
+        overflow: hidden;
+        transition:
+          height 0.4s ease,
+          margin 0.4s ease,
+          padding 0.4s ease;
+      }
+      .leaderboard {
+        width: 778px;
+        height: 116px;
+      }
+      .skyscraper {
+        width: 186px;
+        height: 626px;
+      }
+      .medium-rect {
+        width: 326px;
+        height: 276px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">Ad Demo</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link" href="#">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Products</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">About</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <header class="bg-light py-4 text-center">
+      <h1 class="display-5">Ad SDK Demo Page</h1>
+      <div id="ad-leaderboard" class="ad-placement leaderboard mx-auto"></div>
+    </header>
+
+    <div class="container my-4">
+      <div class="row">
+        <main class="col-lg-8">
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla
+            facilisi. Cras ac sapien at leo aliquet luctus. Donec volutpat,
+            ligula et sollicitudin tincidunt, ligula mauris faucibus ipsum,
+            vitae porta nunc lorem at justo.
+          </p>
+          <div id="ad-medium-rect" class="ad-placement medium-rect"></div>
+          <p>
+            Sed ut perspiciatis unde omnis iste natus error sit voluptatem
+            accusantium doloremque laudantium, totam rem aperiam.
+          </p>
+        </main>
+        <aside class="col-lg-4">
+          <div id="ad-skyscraper" class="ad-placement skyscraper"></div>
+        </aside>
+      </div>
+    </div>
+
+    <footer class="bg-light text-center py-3">&copy; 2025 Example Corp</footer>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js"
+      integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script>
+      function collapse(el) {
+        el.style.height = "0";
+        el.style.padding = "0";
+        el.style.margin = "0";
+        setTimeout(() => (el.style.display = "none"), 400);
+      }
+
+      [
+        "ad-leaderboard",
+        "ad-skyscraper",
+        "ad-medium-rect",
+      ].forEach((id) => {
+        const slot = document.getElementById(id);
+        slot.addEventListener("AdSDK:noAd", () => collapse(slot));
+      });
+
+      const API_KEY = "demo123";
+      AdSDK.setApiKey(API_KEY);
+      AdSDK.setPublisherId(1);
+      AdSDK.renderAd("header", "ad-leaderboard");
+      AdSDK.renderAd("sidebar", "ad-skyscraper");
+      AdSDK.renderAd("content_rect", "ad-medium-rect");
+    </script>
+  </body>
+</html>

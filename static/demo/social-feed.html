@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Social Media Feed - Native Ad Demo</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"
+      integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <script src="/static/sdk/adsdk.js"></script>
+    <style>
+      body {
+        background-color: #f8f9fa;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      .social-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .social-header {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+
+      .post {
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: box-shadow 0.2s ease;
+      }
+
+      .post:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      }
+
+      .post-header {
+        padding: 15px 20px 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+      }
+
+      .post-info {
+        flex: 1;
+      }
+
+      .post-author {
+        font-weight: 600;
+        color: #1c1c1e;
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .post-time {
+        color: #8e8e93;
+        font-size: 13px;
+        margin: 0;
+      }
+
+      .post-content {
+        padding: 0 20px 15px;
+      }
+
+      .post-text {
+        color: #1c1c1e;
+        line-height: 1.4;
+        margin-bottom: 12px;
+      }
+
+      .post-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 12px;
+      }
+
+      .post-actions {
+        display: flex;
+        gap: 20px;
+        padding: 0 20px 15px;
+        border-top: 1px solid #f0f0f0;
+        margin-top: 10px;
+        padding-top: 12px;
+      }
+
+      .post-action {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: none;
+        color: #8e8e93;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        transition: all 0.2s ease;
+      }
+
+      .post-action:hover {
+        background-color: #f0f0f0;
+        color: #1c1c1e;
+      }
+
+      .post-action.liked {
+        color: #ff3b30;
+      }
+
+      .post-action.shared {
+        color: #007aff;
+      }
+
+      .post-action.commented {
+        color: #34c759;
+      }
+
+      .post-action.followed {
+        background-color: #007aff;
+        color: white;
+      }
+
+      .native-ad-post {
+        position: relative;
+      }
+
+      .sponsored-label {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        background: rgba(0,0,0,0.1);
+        color: #8e8e93;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        z-index: 2;
+      }
+
+      .cta-button {
+        background: linear-gradient(45deg, #007aff, #0051d2);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 8px;
+      }
+
+      .cta-button:hover {
+        background: linear-gradient(45deg, #0051d2, #003d99);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,122,255,0.3);
+      }
+
+      .ad-report-btn {
+        position: absolute;
+        top: 15px;
+        right: 50px;
+        background: rgba(0,0,0,0.1);
+        border: none;
+        color: #8e8e93;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        z-index: 3;
+      }
+
+      .ad-report-btn:hover {
+        background: rgba(0,0,0,0.2);
+        color: #333;
+      }
+
+      /* Background Skin Takeover Styles */
+      .takeover-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: auto;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.8s ease;
+      }
+
+      .takeover-overlay.show {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .takeover-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        z-index: -1;
+        pointer-events: none;
+      }
+
+      .takeover-background::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, rgba(255,107,107,0.2), rgba(238,90,36,0.1));
+        pointer-events: none;
+      }
+
+      /* Branded sidebar ads */
+      .skin-sidebar-left,
+      .skin-sidebar-right {
+        position: fixed;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 10000;
+        pointer-events: auto;
+        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-align: center;
+        padding: 20px;
+        box-shadow: 0 0 30px rgba(255,107,107,0.3);
+      }
+
+      .skin-sidebar-left {
+        left: 0;
+      }
+
+      .skin-sidebar-right {
+        right: 0;
+      }
+
+      .skin-offer {
+        font-size: 2.5rem;
+        font-weight: 900;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      }
+
+      .skin-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        line-height: 1.2;
+      }
+
+      .skin-cta {
+        background: rgba(255,255,255,0.2);
+        border: 2px solid white;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        pointer-events: auto;
+        cursor: pointer;
+      }
+
+      .skin-cta:hover {
+        background: white;
+        color: #ff6b6b;
+        text-decoration: none;
+        transform: scale(1.05);
+      }
+
+      /* Adjust main content to account for skin sidebars */
+      .social-container {
+        position: relative;
+        z-index: 9999;
+        margin: 0 220px; /* Account for 200px sidebars + 20px margin */
+        transition: margin 0.8s ease;
+      }
+
+      .takeover-overlay:not(.show) + .social-container {
+        margin: 0 auto; /* Reset margins when skin is hidden */
+      }
+
+      /* Close button for skin */
+      .skin-close {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255,107,107,0.9);
+        color: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(255,107,107,0.3);
+        pointer-events: auto;
+      }
+
+      .skin-close:hover {
+        background: #ff6b6b;
+        transform: scale(1.1);
+      }
+
+      /* Mobile responsiveness */
+      @media (max-width: 1200px) {
+        .social-container {
+          margin: 0 20px;
+        }
+
+        .skin-sidebar-left,
+        .skin-sidebar-right {
+          display: none;
+        }
+
+        .takeover-background {
+          opacity: 0.3;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="social-container">
+      <div class="social-header">
+        <h1 class="h4 mb-2">📱 Native Ad Integration Demo</h1>
+        <p class="text-muted mb-0">
+          <strong>Two Native Ad Formats Demonstrated:</strong><br>
+          🎯 <strong>In-Feed Native Ad</strong> (Position 3) - Seamlessly integrated sponsored post with custom engagement tracking (like, share, comment)<br>
+          🖼️ <strong>Background Skin Takeover</strong> (Appears after 1 sec) - Non-blocking branded sidebars with full-screen background, ASAP delivery with no frequency caps
+        </p>
+      </div>
+
+      <!-- Post 1 -->
+      <div class="post">
+        <div class="post-header">
+          <div class="avatar">JD</div>
+          <div class="post-info">
+            <h6 class="post-author">John Doe</h6>
+            <p class="post-time">2 hours ago</p>
+          </div>
+        </div>
+        <div class="post-content">
+          <p class="post-text">Just finished an amazing hike in the mountains! The views were absolutely breathtaking. Nature never fails to inspire me. 🏔️✨</p>
+          <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=200&fit=crop" alt="Mountain landscape" class="post-image">
+        </div>
+        <div class="post-actions">
+          <button class="post-action" onclick="toggleLike(this)">
+            <span>❤️</span> <span class="count">24</span> Like
+          </button>
+          <button class="post-action" onclick="toggleShare(this)">
+            <span>🔗</span> <span class="count">5</span> Share
+          </button>
+          <button class="post-action">
+            <span>💬</span> <span class="count">8</span> Comment
+          </button>
+        </div>
+      </div>
+
+      <!-- Post 2 -->
+      <div class="post">
+        <div class="post-header">
+          <div class="avatar" style="background: linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%);">SM</div>
+          <div class="post-info">
+            <h6 class="post-author">Sarah Miller</h6>
+            <p class="post-time">4 hours ago</p>
+          </div>
+        </div>
+        <div class="post-content">
+          <p class="post-text">Tried a new recipe today - homemade pasta with truffle oil! Cooking has become my new favorite hobby during weekends. 🍝👩‍🍳</p>
+          <img src="https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=600&h=200&fit=crop" alt="Pasta dish" class="post-image">
+        </div>
+        <div class="post-actions">
+          <button class="post-action" onclick="toggleLike(this)">
+            <span>❤️</span> <span class="count">42</span> Like
+          </button>
+          <button class="post-action" onclick="toggleShare(this)">
+            <span>🔗</span> <span class="count">12</span> Share
+          </button>
+          <button class="post-action">
+            <span>💬</span> <span class="count">15</span> Comment
+          </button>
+        </div>
+      </div>
+
+      <!-- Native Ad Slot - Position 3 -->
+      <div id="native-ad-feed" class="post native-ad-post">
+        <div class="sponsored-label">Sponsored</div>
+        <!-- Native ad will be rendered here -->
+      </div>
+
+      <!-- Post 4 -->
+      <div class="post">
+        <div class="post-header">
+          <div class="avatar" style="background: linear-gradient(45deg, #4ecdc4 0%, #44a08d 100%);">MT</div>
+          <div class="post-info">
+            <h6 class="post-author">Mike Thompson</h6>
+            <p class="post-time">6 hours ago</p>
+          </div>
+        </div>
+        <div class="post-content">
+          <p class="post-text">Finally finished reading "The Design of Everyday Things" - such an insightful book about user experience and design psychology! Highly recommend it to anyone in tech. 📚💡</p>
+        </div>
+        <div class="post-actions">
+          <button class="post-action" onclick="toggleLike(this)">
+            <span>❤️</span> <span class="count">18</span> Like
+          </button>
+          <button class="post-action" onclick="toggleShare(this)">
+            <span>🔗</span> <span class="count">7</span> Share
+          </button>
+          <button class="post-action">
+            <span>💬</span> <span class="count">4</span> Comment
+          </button>
+        </div>
+      </div>
+
+      <!-- Post 5 -->
+      <div class="post">
+        <div class="post-header">
+          <div class="avatar" style="background: linear-gradient(45deg, #a8edea 0%, #fed6e3 100%); color: #333;">LJ</div>
+          <div class="post-info">
+            <h6 class="post-author">Lisa Johnson</h6>
+            <p class="post-time">8 hours ago</p>
+          </div>
+        </div>
+        <div class="post-content">
+          <p class="post-text">Weekend market haul! Got some amazing fresh produce from local farmers. There's nothing quite like the taste of freshly picked vegetables. 🥕🥬🍅</p>
+          <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=200&fit=crop" alt="Fresh vegetables" class="post-image">
+        </div>
+        <div class="post-actions">
+          <button class="post-action" onclick="toggleLike(this)">
+            <span>❤️</span> <span class="count">31</span> Like
+          </button>
+          <button class="post-action" onclick="toggleShare(this)">
+            <span>🔗</span> <span class="count">9</span> Share
+          </button>
+          <button class="post-action">
+            <span>💬</span> <span class="count">6</span> Comment
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Background Skin Container -->
+    <div id="takeover-container" class="takeover-overlay" data-disable-reporting="true">
+      <!-- Background skin ad will be rendered here -->
+    </div>
+
+    <script>
+      function trackNativeEvent(eventType, button) {
+        // Update the count in the clicked button
+        const countSpan = button.querySelector('.count');
+        if (countSpan) {
+          const currentCount = parseInt(countSpan.textContent);
+          countSpan.textContent = currentCount + 1;
+        }
+
+        // Add visual feedback
+        button.classList.add(eventType === 'like' ? 'liked' : eventType === 'share' ? 'shared' : 'commented');
+      }
+
+      function handleReportClick(button) {
+        const adContainer = button.closest('#native-ad-feed');
+        const reportUrl = adContainer.dataset.reportUrl;
+        if (reportUrl && window.AdSDK) {
+          AdSDK.showReportModal(reportUrl);
+        }
+      }
+
+      function showSkin() {
+        const overlay = document.getElementById('takeover-container');
+        overlay.classList.add('show');
+      }
+
+      function hideSkin() {
+        const overlay = document.getElementById('takeover-container');
+        overlay.classList.remove('show');
+      }
+
+      // Regular post interactions
+      function toggleLike(button) {
+        button.classList.toggle('liked');
+        const countSpan = button.querySelector('.count');
+        const currentCount = parseInt(countSpan.textContent);
+        countSpan.textContent = button.classList.contains('liked') ? currentCount + 1 : currentCount - 1;
+      }
+
+      function toggleShare(button) {
+        button.classList.toggle('shared');
+        const countSpan = button.querySelector('.count');
+        const currentCount = parseInt(countSpan.textContent);
+        countSpan.textContent = button.classList.contains('shared') ? currentCount + 1 : currentCount - 1;
+      }
+
+      // Handle no-ad scenario
+      document.getElementById('native-ad-feed').addEventListener('AdSDK:noAd', function() {
+        this.style.display = 'none';
+      });
+
+      // Initialize Ad SDK
+      const API_KEY = "demo123";
+      AdSDK.setApiKey(API_KEY);
+      AdSDK.setPublisherId(1);
+
+      // Set global custom parameters for social feed context
+      // These parameters will be passed to ALL ad requests from this page
+      AdSDK.setCustomParams({
+        platform: 'social_feed',
+        user_segment: 'engaged_social_user',
+        content_type: 'lifestyle_feed',
+        page_depth: '1',
+        session_engagement: 'high'
+      });
+
+      // Auto-capture UTM parameters from page URL
+      AdSDK.setUTMFromPage();
+
+      // Set placement-specific custom parameters for native feed ad
+      // These parameters are specific to the native feed placement
+      // Parameter priority: per-request > per-slot > global
+      AdSDK.setAdSlotCustomParams('social_native_post', {
+        ad_position: 'feed_position_3',
+        content_context: 'user_generated_content',
+        targeting_keywords: 'lifestyle,travel,food,fashion',
+        visibility_score: 'high',
+        placement_type: 'native_in_feed'
+      });
+
+      // Set placement-specific custom parameters for skin takeover
+      // These parameters enable rich attribution for premium brand campaigns
+      AdSDK.setAdSlotCustomParams('social_skin_takeover', {
+        ad_format: 'background_skin',
+        impact_level: 'high_impact',
+        targeting_keywords: 'premium_brands,luxury,exclusive',
+        frequency_cap: 'once_per_session',
+        placement_type: 'skin_takeover'
+      });
+
+      // When users click ads, these custom parameters will be expanded in URLs like:
+      // https://advertiser.com/landing?platform={CUSTOM.platform}&keywords={CUSTOM.targeting_keywords}&position={CUSTOM.ad_position}
+
+      // Render native ad that looks like a social media post
+      AdSDK.renderNativeAd(
+        "social_native_post",
+        "native-ad-feed",
+        (assets) => `
+          <button class="ad-report-btn" data-adsdk-report="true" onclick="handleReportClick(this)" title="Report this ad">⋯</button>
+          <div class="post-header">
+            <div class="avatar" style="background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);">${assets.brand?.[0] || 'AD'}</div>
+            <div class="post-info">
+              <h6 class="post-author">${assets.brand || assets.title}</h6>
+              <p class="post-time">Sponsored</p>
+            </div>
+          </div>
+          <div class="post-content">
+            <p class="post-text">${assets.description || assets.title}</p>
+            ${assets.image ? `<img src="${assets.image}" alt="${assets.title}" class="post-image">` : ''}
+            <a href="${assets.clickUrl}" target="_blank" class="cta-button">
+              Learn More →
+            </a>
+          </div>
+          <div class="post-actions">
+            <button class="post-action" data-ad-event="like" onclick="trackNativeEvent('like', this)">
+              <span>❤️</span> <span class="count">0</span> Like
+            </button>
+            <button class="post-action" data-ad-event="share" onclick="trackNativeEvent('share', this)">
+              <span>🔗</span> <span class="count">0</span> Share
+            </button>
+            <button class="post-action" data-ad-event="comment" onclick="trackNativeEvent('comment', this)">
+              <span>💬</span> <span class="count">0</span> Comment
+            </button>
+          </div>
+        `
+      );
+
+      // Render background skin takeover ad (no report button for skin format)
+      AdSDK.renderNativeAd(
+        "social_skin_takeover",
+        "takeover-container",
+        (assets) => `
+          <div class="takeover-background" style="background-image: url('${assets.background || assets.image}')"></div>
+          <button class="skin-close" onclick="hideSkin()">×</button>
+
+          <div class="skin-sidebar-left">
+            <div class="skin-offer">${assets.offer || '70%'}</div>
+            <div class="skin-title">Black Friday Sale</div>
+            <a href="${assets.clickUrl}" target="_blank" class="skin-cta">
+              Shop Now
+            </a>
+          </div>
+
+          <div class="skin-sidebar-right">
+            <div class="skin-offer">OFF</div>
+            <div class="skin-title">${assets.brand || 'Limited Time Only!'}</div>
+            <a href="${assets.clickUrl}" target="_blank" class="skin-cta">
+              ${assets.cta_text || 'Join Now'}
+            </a>
+          </div>
+        `
+      );
+
+      // Show skin immediately (ASAP delivery)
+      setTimeout(showSkin, 1000);
+
+
+      // Close skin with Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          hideSkin();
+        }
+      });
+    </script>
+  </body>
+</html>

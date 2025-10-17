@@ -1,0 +1,212 @@
+{
+  "uid": "openadserve",
+  "title": "OpenAdServe Metrics",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "API Requests",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(adserver_requests_total[1m])) by (endpoint,method,status)",
+          "legendFormat": "{{endpoint}} {{method}} {{status}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Request Latency",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(adserver_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.75, sum(rate(adserver_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p75"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(adserver_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(adserver_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Fill Rate (%)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "100 * sum(rate(adserver_events_total{type=\"ad_served\"}[1m])) / sum(rate(adserver_events_total{type=\"ad_request\"}[1m]))",
+          "legendFormat": "fill %"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Ads Served",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(adserver_events_total{type=\"ad_served\"}[1m]))",
+          "legendFormat": "served"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "No Bid Responses",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(adserver_nobid_total[1m]))",
+          "legendFormat": "no bids"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Impressions",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(adserver_impressions_total[1m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Click Events",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(adserver_events_total{type=\"click\"}[1m]))",
+          "legendFormat": "clicks"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Event Rates",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(adserver_events_total[1m])) by (type)",
+          "legendFormat": "{{type}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Spend Rate ($/s)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(adserver_spend_total[1m]))",
+          "legendFormat": "dollars/s"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Total Spend ($)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(adserver_spend_total)",
+          "legendFormat": "total"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Spend by Campaign",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "adserver_spend_total",
+          "legendFormat": "{{campaign}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      }
+    }
+  ]
+}

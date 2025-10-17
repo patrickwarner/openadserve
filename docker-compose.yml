@@ -1,0 +1,174 @@
+services:
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis:6379
+      - TZ=America/New_York
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - redis
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - TZ=America/New_York
+    ports:
+      - "5432:5432"
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+  openadserve:
+    build: .
+    ports:
+      - "8787:8787"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_started
+      ctr-predictor:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+  ctr-predictor:
+    build: 
+      context: ./services/ctr-predictor
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_DB=default
+      - TZ=America/New_York
+    volumes:
+      - ./services/ctr-predictor/models:/app/models
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    healthcheck:
+      test: [ "CMD", "clickhouse-client", "--query", "SELECT 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - TZ=America/New_York
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+  prometheus:
+    image: prom/prometheus
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9090:9090"
+    depends_on:
+      - openadserve
+  grafana:
+    image: grafana/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - TZ=America/New_York
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+    volumes:
+      - ./deploy/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./deploy/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+  loki:
+    image: grafana/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./deploy/loki/loki-config.yml:/etc/loki/loki-config.yml
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3100:3100"
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./deploy/tempo/tempo.yaml:/etc/tempo.yaml
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3200:3200"   # Tempo query endpoint
+      - "4317:4317"   # OpenTelemetry gRPC receiver
+      - "4318:4318"   # OpenTelemetry HTTP receiver
+  promtail:
+    image: grafana/promtail
+    command: -config.file=/etc/promtail/config.yml
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./deploy/loki/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - openadserve
+      - loki
+  prebid-server:
+    image: prebid/prebid-server:v3.22.0
+    profiles: ["prebid"]
+    environment:
+      - PBS_HOST_EXTERNAL_URL=http://prebid-server:8000
+      - PBS_GDPR_DEFAULT_VALUE=0
+    volumes:
+      - ./deploy/prebid/config.yml:/config/config.yml
+      - ./deploy/prebid/stored_requests:/stored_requests:ro
+    command: ["/prebid-server", "--config=/config/config.yml"]
+    ports:
+      - "8060:8000"

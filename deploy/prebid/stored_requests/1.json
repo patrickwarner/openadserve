@@ -1,0 +1,5 @@
+{
+  "id": "1",
+  "imp": [{"id": "1", "banner": {"format": [{"w": 300, "h": 250}]}}],
+  "site": {"page": "http://example.com"}
+}

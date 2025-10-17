@@ -1,0 +1,51 @@
+# IDE configuration directories
+.idea/
+.claude/
+.DS_Store
+
+# Compiled binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server
+
+# Test binaries
+*.test
+
+# Output of go coverage tools
+*.out
+*.coverprofile
+coverage.out
+
+# Build directories
+bin/
+build/
+dist/
+
+# Go workspace file
+go.work
+.env
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Machine learning model files
+*.pkl
+*.joblib
+*.h5
+*.pb
+*.onnx
+
+# Integration test results
+tests/integration/*/results.md
+tests/integration/*/pacing_analysis.png
+tests/integration/*/*.png
+
+# LLM model files
+CLAUDE.md

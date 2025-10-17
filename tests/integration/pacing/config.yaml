@@ -1,0 +1,68 @@
+# Pacing Strategy Test Configuration
+
+test:
+  name: "Pacing Strategy Comparison"
+  description: "Compares ASAP, Even, and PID pacing strategies under controlled load"
+
+# Test data configuration
+data:
+  publisher_id: 999
+  api_key: "pacing-test-key"
+  daily_impression_cap: 50000   # Create supply constraints (vs 360k requests)
+  cpm: 2.50  # Cost per thousand impressions
+  budget_multiplier: 1.5  # 50% buffer for safety
+  campaigns:
+    - id: 999001
+      name: "ASAP Pacing Test Campaign"
+      pacing_strategy: "asap"
+    - id: 999002
+      name: "Even Pacing Test Campaign"
+      pacing_strategy: "even"
+    - id: 999003
+      name: "PID Pacing Test Campaign"
+      pacing_strategy: "pid"
+
+  placements:
+    - id: "test-header"
+      width: 728
+      height: 90
+    - id: "test-sidebar"
+      width: 160
+      height: 600
+    - id: "test-content"
+      width: 300
+      height: 250
+
+# Traffic simulation parameters
+traffic:
+  duration: "2h"           # Longer test duration to see pacing patterns
+  total_requests: 720000   # 200 req/sec * 2 hours = 720k requests
+  users: 100000           # Large user pool to avoid frequency cap issues
+  rate_per_second: 200    # Higher traffic pressure (200 req/sec)
+  concurrency: 40         # Higher concurrency for traffic pressure
+  click_rate: 0.03        # Moderate click rate (3%)
+  # Introduce irregular traffic patterns
+  surge_interval: "10m"   # Every 10 minutes send bursts
+  surge_duration: "2m"    # Surges last for 2 minutes
+  surge_multiplier: 3.0   # Triple the request rate during a surge
+  jitter: 0.2             # Add ±20% randomness to request spacing
+
+# Analysis configuration
+analysis:
+  time_intervals:
+    - "1min"    # Minute-by-minute analysis
+    - "2min"    # 2-minute intervals for detailed view
+    - "5min"    # 5-minute intervals for cleaner visualization
+
+  output:
+    chart_file: "pacing_analysis.png"
+    report_file: "pacing_results.md"
+
+# Expected results (for validation)
+# Note: These are loose bounds for sanity checking, not rigid expectations
+expected:
+  total_impressions_min: 120000   # ~80% fill rate minimum (150k total cap)
+  total_impressions_max: 150000   # 100% fill rate maximum (3 x 50k)
+  asap_completion_time_max: 1800  # ASAP should complete within 30 minutes (1800 seconds)
+  strategy_variance_max: 40000    # Allow variance up to daily cap size
+  test_duration_tolerance: 600    # Allow 10min variance for realistic timing

@@ -1,0 +1,19 @@
+log:
+  level: "info"
+
+stored_requests:
+  filesystem:
+    enabled: true
+    directorypath: "/stored_requests"
+
+host:
+  external_url: "http://prebid-server:8000"
+  port: 8000
+
+gdpr:
+  default_value: "0"
+
+adapters:
+  generic:
+    endpoint: "http://httpbin.org/post"
+    disabled: false

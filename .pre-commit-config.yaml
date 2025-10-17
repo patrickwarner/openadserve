@@ -1,0 +1,40 @@
+repos:
+  - repo: local
+    hooks:
+      - id: goimports
+        name: goimports
+        entry: bash -c 'goimports -w $(git ls-files "*.go")'
+        language: system
+        types: [go]
+      - id: go-vet
+        name: go vet
+        entry: go vet ./...
+        language: system
+        pass_filenames: false
+      - id: golangci-lint
+        name: golangci-lint
+        entry: golangci-lint run
+        language: system
+        pass_filenames: false
+      - id: go-mod-tidy
+        name: go mod tidy
+        entry: bash -c 'go mod tidy && git diff --exit-code go.mod go.sum'
+        language: system
+        pass_filenames: false
+      - id: go-test
+        name: go test
+        entry: go test ./...
+        language: system
+        pass_filenames: false
+      - id: minify-js-sdk
+        name: minify javascript sdk
+        entry: ./scripts/minify-sdk.sh
+        language: script
+        files: ^static/sdk/adsdk\.js$
+        pass_filenames: false
+      - id: docker-build
+        name: docker build
+        entry: docker build .
+        language: system
+        files: \.(go|mod|sum)$|^Dockerfile$|^\.dockerignore$
+        pass_filenames: false

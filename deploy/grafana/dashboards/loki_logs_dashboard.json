@@ -1,0 +1,129 @@
+{
+  "uid": "loki-logs",
+  "title": "OpenAdServe Logs",
+  "schemaVersion": 36,
+  "version": 3,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "templating": {
+    "list": [
+      {
+        "name": "event_type",
+        "type": "query",
+        "query": "label_values(event_type)",
+        "datasource": "Loki",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Logs/min",
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum(rate({service_name=\"openadserve\"}[1m])) * 60"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Event Types",
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "count by (event_type) (count_over_time({service_name=\"openadserve\", event_type!=\"\"}[1h]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Service Status",
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "count(count_over_time({service_name=\"openadserve\"}[1m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {"options": {"0": {"text": "Down", "color": "red"}}, "type": "value"},
+            {"options": {"from": 1, "to": 999}, "type": "range", "result": {"text": "Up", "color": "green"}}
+          ]
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Log Volume by Event Type",
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum by (event_type) (rate({service_name=\"openadserve\", event_type!=\"\"}[1m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Total Log Rate",
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum(rate({service_name=\"openadserve\"}[1m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 }
+    },
+    {
+      "type": "logs",
+      "title": "Application Logs",
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "{service_name=\"openadserve\", event_type=~\"$event_type\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": false,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 12 }
+    }
+  ]
+}

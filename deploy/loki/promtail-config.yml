@@ -1,0 +1,69 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+positions:
+  filename: /tmp/positions.yaml
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+scrape_configs:
+  - job_name: openadserve
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    pipeline_stages:
+      - docker: {}
+      # Parse JSON logs and extract structured data
+      - json:
+          expressions:
+            level: level
+            message: msg
+            time: ts
+            service_name: service
+            endpoint: endpoint
+            method: method
+            request_id: request_id
+            user_id: user_id
+            event_type: event_type
+            error: error
+      # Add labels from parsed JSON
+      - labels:
+          container: "openadserve"
+          service_name: ""
+          log_level: ""
+          endpoint: ""
+          method: ""
+          event_type: ""
+      # Set service_name label from parsed JSON
+      - template:
+          source: service_name
+          template: '{{ .service_name }}'
+      # Set log level label from parsed JSON
+      - template:
+          source: log_level
+          template: '{{ .level }}'
+      # Set endpoint label from parsed JSON
+      - template:
+          source: endpoint
+          template: '{{ .endpoint }}'
+      # Set method label from parsed JSON
+      - template:
+          source: method
+          template: '{{ .method }}'
+      # Set event_type label from parsed JSON
+      - template:
+          source: event_type
+          template: '{{ .event_type }}'
+    relabel_configs:
+      # Keep logs from containers whose name contains 'openadserve' followed by a number (e.g., project_openadserve-1)
+      # The __meta_docker_container_name label includes a leading slash, e.g., /project_openadserve-1
+      - source_labels: [__meta_docker_container_name]
+        regex: '.*/openadserve-\\d+' # Matches the openadserve container, accounting for compose project name and instance number
+        action: keep
+      # Rename the __meta_docker_container_name label to original_container_name for clarity if needed later
+      - source_labels: [__meta_docker_container_name]
+        target_label: original_container_name
+        action: replace
+      # Create a job label based on the service name if not already present
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: job
+        action: replace # Overwrites if 'job' label already exists from docker_sd_configs
