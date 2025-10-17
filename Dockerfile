@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o openadserve ./cmd/server
+RUN go build -o openadserve ./cmd/server/main.go
 
 EXPOSE 8787
 
