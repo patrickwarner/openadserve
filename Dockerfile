@@ -1,15 +1,35 @@
-# Use a Go version that matches the toolchain in go.mod
-FROM golang:1.24
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git
 
 WORKDIR /app
 
-COPY go.mod ./
-COPY go.sum ./
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
 RUN go mod download
 
+# Copy source code
 COPY . .
 
-RUN go build -o openadserve ./cmd/server/main.go
+# Build with optimizations for smaller binary
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o openadserve ./cmd/server/main.go
+
+# Runtime stage
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/openadserve .
+
+# Copy necessary data files
+COPY --from=builder /app/data ./data
+COPY --from=builder /app/static ./static
 
 EXPOSE 8787
 
