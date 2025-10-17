@@ -49,3 +49,6 @@ tests/integration/*/*.png
 
 # LLM model files
 CLAUDE.md
+
+# Deployment scripts (contain IPs/secrets)
+scripts/deploy-demo.sh
