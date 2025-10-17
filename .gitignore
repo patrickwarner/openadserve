@@ -9,7 +9,7 @@
 *.dll
 *.so
 *.dylib
-server
+/server
 
 # Test binaries
 *.test
