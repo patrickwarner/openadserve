@@ -175,11 +175,8 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 				cpc = 1.0 // Default $1 CPC
 			}
 
-			// Use specific placement IDs if provided, otherwise this placement
-			placementIDs := input.PlacementIDs
-			if len(placementIDs) == 0 {
-				placementIDs = []string{placement.ID}
-			}
+			// Always forecast for this specific placement only
+			placementIDs := []string{placement.ID}
 
 			forecastReq := &models.ForecastRequest{
 				PublisherID:  input.PublisherID,
