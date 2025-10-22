@@ -223,18 +223,21 @@ func buildTrafficQuery(req *models.ForecastRequest) (string, []interface{}) {
 }
 
 // aggregatePatternsByDay aggregates 15-minute patterns into daily totals
+// When multiple placements are involved, they are aggregated separately by placement
 func aggregatePatternsByDay(patterns []*TrafficPattern) map[string]*TrafficPattern {
 	daily := make(map[string]*TrafficPattern)
 
 	for _, p := range patterns {
-		day := p.TimeWindow.Format("2006-01-02")
+		// Create a composite key that includes placement_id to maintain placement separation
+		// This prevents data from different placements being merged together
+		key := fmt.Sprintf("%s_%s", p.TimeWindow.Format("2006-01-02"), p.PlacementID)
 
-		if existing, ok := daily[day]; ok {
+		if existing, ok := daily[key]; ok {
 			existing.Opportunities += p.Opportunities
 			existing.Impressions += p.Impressions
 			existing.Clicks += p.Clicks
 		} else {
-			daily[day] = &TrafficPattern{
+			daily[key] = &TrafficPattern{
 				TimeWindow:    p.TimeWindow.Truncate(24 * time.Hour),
 				PublisherID:   p.PublisherID,
 				PlacementID:   p.PlacementID,

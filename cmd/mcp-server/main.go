@@ -145,10 +145,8 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 			format = placement.Formats[0]
 		}
 
-		// Default available impressions (since forecasting may not work without ClickHouse)
-		availableImpressions := int64(100000) // Default 100k impressions
-
 		// Try to use forecasting engine if available
+		availableImpressions := int64(100000) // Default fallback
 		if s.forecast != nil {
 			// Normalize budget type
 			budgetType := input.BudgetType
@@ -190,22 +188,25 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 				CPC:          cpc,
 			}
 
-			s.logger.Debug("Requesting forecast",
+			s.logger.Info("Requesting forecast",
 				zap.String("placement_id", placement.ID),
 				zap.String("budget_type", forecastReq.BudgetType),
-				zap.Float64("budget", forecastReq.Budget))
+				zap.Float64("budget", forecastReq.Budget),
+				zap.Strings("placement_ids_in_request", placementIDs))
 
 			// Add a timeout context to prevent hanging
 			forecastCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			if forecastResult, err := s.forecast.Forecast(forecastCtx, forecastReq); err == nil && forecastResult != nil {
+			if forecastResult, err := s.forecast.Forecast(forecastCtx, forecastReq); err == nil && forecastResult != nil && forecastResult.AvailableImpressions > 0 {
 				availableImpressions = forecastResult.AvailableImpressions
-				s.logger.Debug("Forecast completed",
+				s.logger.Info("Forecast completed",
 					zap.String("placement_id", placement.ID),
 					zap.Int64("available_impressions", availableImpressions),
 					zap.Float64("fill_rate", forecastResult.FillRate))
 			} else {
+				// Reset to default for this specific placement on forecast failure
+				availableImpressions = int64(100000)
 				s.logger.Warn("Forecast failed, using default",
 					zap.String("placement_id", placement.ID),
 					zap.Error(err),

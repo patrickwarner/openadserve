@@ -2,6 +2,8 @@ package forecasting
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -59,11 +61,33 @@ func (e *Engine) calculateAvailableInventory(ctx context.Context, req *models.Fo
 	for !current.After(req.EndDate) {
 		dayStr := current.Format("2006-01-02")
 
-		// Check if we have historical data for this specific day
-		if historicalPattern, exists := dailyPatterns[dayStr]; exists {
+		// Check if we have historical data for this specific day and placement combination
+		var dailyOpportunities int64
+		foundHistoricalData := false
+
+		// When forecasting for specific placements, look for placement-specific patterns
+		if len(req.PlacementIDs) > 0 {
+			for _, placementID := range req.PlacementIDs {
+				key := fmt.Sprintf("%s_%s", dayStr, placementID)
+				if historicalPattern, exists := dailyPatterns[key]; exists {
+					dailyOpportunities += historicalPattern.Opportunities
+					foundHistoricalData = true
+				}
+			}
+		} else {
+			// For publisher-wide forecasts, look for any pattern matching the date
+			for key, historicalPattern := range dailyPatterns {
+				if strings.HasPrefix(key, dayStr+"_") || key == dayStr {
+					dailyOpportunities += historicalPattern.Opportunities
+					foundHistoricalData = true
+				}
+			}
+		}
+
+		if foundHistoricalData {
 			// Use historical data if available
-			inventory.DailyBreakdown[dayStr] = historicalPattern.Opportunities
-			inventory.TotalOpportunities += historicalPattern.Opportunities
+			inventory.DailyBreakdown[dayStr] = dailyOpportunities
+			inventory.TotalOpportunities += dailyOpportunities
 		} else {
 			// Otherwise use average with day-of-week adjustment
 			dayOfWeek := current.Weekday()
