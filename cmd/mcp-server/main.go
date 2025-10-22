@@ -24,10 +24,10 @@ type GetProductsInput struct {
 	StartDate    time.Time `json:"start_date"`
 	EndDate      time.Time `json:"end_date"`
 	MinBudget    float64   `json:"min_budget,omitempty"`
-	BudgetType   string    `json:"budget_type,omitempty"` // CPM, CPC, Flat
-	Priority     int       `json:"priority,omitempty"`    // 1-10 priority level
-	CPM          float64   `json:"cpm,omitempty"`         // Cost per mille
-	CPC          float64   `json:"cpc,omitempty"`         // Cost per click
+	BudgetType   string    `json:"budget_type,omitempty"`   // CPM, CPC, Flat
+	Priority     int       `json:"priority,omitempty"`      // 1-10 priority level
+	CPM          float64   `json:"cpm,omitempty"`           // Cost per mille
+	CPC          float64   `json:"cpc,omitempty"`           // Cost per click
 	PlacementIDs []string  `json:"placement_ids,omitempty"` // Specific placements to forecast
 }
 
@@ -49,11 +49,11 @@ type GetProductsOutput struct {
 }
 
 type CreateMediaBuyInput struct {
-	Name        string `json:"name"`
-	PublisherID int    `json:"publisher_id"`
+	Name        string  `json:"name"`
+	PublisherID int     `json:"publisher_id"`
 	Budget      float64 `json:"budget"`
-	BudgetType  string `json:"budget_type"`
-	PlacementID string `json:"placement_id"`
+	BudgetType  string  `json:"budget_type"`
+	PlacementID string  `json:"placement_id"`
 }
 
 type CreateMediaBuyOutput struct {
@@ -75,25 +75,69 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 	// Add overall timeout to prevent hanging
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+
+	// Validate required inputs
+	if input.PublisherID <= 0 {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid publisher_id: must be a positive integer",
+			}},
+		}, GetProductsOutput{}, nil
+	}
+
+	if input.StartDate.IsZero() || input.EndDate.IsZero() {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid dates: start_date and end_date are required",
+			}},
+		}, GetProductsOutput{}, nil
+	}
+
+	if input.EndDate.Before(input.StartDate) {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid date range: end_date must be after start_date",
+			}},
+		}, GetProductsOutput{}, nil
+	}
+
+	// Validate budget type if provided
+	if input.BudgetType != "" {
+		validTypes := []string{"cpm", "cpc", "flat"}
+		budgetType := strings.ToLower(input.BudgetType)
+		isValid := false
+		for _, validType := range validTypes {
+			if budgetType == validType {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{
+					Text: "Invalid budget_type: must be one of 'cpm', 'cpc', or 'flat'",
+				}},
+			}, GetProductsOutput{}, nil
+		}
+	}
 	// Get all placements and filter by publisher
 	allPlacements := s.adDataStore.GetAllPlacements()
-	s.logger.Info("Found placements in ad data store", 
+	s.logger.Debug("Processing placement discovery",
 		zap.Int("total_placements", len(allPlacements)),
 		zap.Int("publisher_id", input.PublisherID))
-	
+
 	var products []Product
 
 	for _, placement := range allPlacements {
-		s.logger.Debug("Checking placement", 
-			zap.String("placement_id", placement.ID),
-			zap.Int("placement_publisher_id", placement.PublisherID),
-			zap.Int("requested_publisher_id", input.PublisherID))
 		if placement.PublisherID != input.PublisherID {
 			continue
 		}
-		s.logger.Info("Including placement for forecasting", 
-			zap.String("placement_id", placement.ID),
-			zap.Int("publisher_id", input.PublisherID))
+		s.logger.Debug("Processing placement for forecasting",
+			zap.String("placement_id", placement.ID))
 
 		// Determine primary format
 		format := "display" // default
@@ -106,11 +150,7 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 
 		// Try to use forecasting engine if available
 		if s.forecast != nil {
-			// Set budget values for forecasting
-			s.logger.Info("Processing budget type", 
-				zap.String("placement_id", placement.ID),
-				zap.String("input_budget_type", input.BudgetType))
-			
+			// Normalize budget type
 			budgetType := input.BudgetType
 			if budgetType == "" {
 				budgetType = "cpm"
@@ -118,11 +158,6 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 				// Convert to lowercase to match model constants
 				budgetType = strings.ToLower(budgetType)
 			}
-			
-			s.logger.Info("Converted budget type", 
-				zap.String("placement_id", placement.ID),
-				zap.String("original", input.BudgetType),
-				zap.String("converted", budgetType))
 			budget := input.MinBudget
 			if budget == 0 {
 				budget = 1000.0 // Default $1000 budget
@@ -158,14 +193,10 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 				CPC:          cpc,
 			}
 
-			s.logger.Info("Sending forecast request", 
+			s.logger.Debug("Requesting forecast",
 				zap.String("placement_id", placement.ID),
-				zap.Int("publisher_id", forecastReq.PublisherID),
 				zap.String("budget_type", forecastReq.BudgetType),
-				zap.Float64("budget", forecastReq.Budget),
-				zap.Int("priority", forecastReq.Priority),
-				zap.Float64("cpm", forecastReq.CPM),
-				zap.Float64("cpc", forecastReq.CPC))
+				zap.Float64("budget", forecastReq.Budget))
 
 			// Add a timeout context to prevent hanging
 			forecastCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -173,21 +204,20 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 
 			if forecastResult, err := s.forecast.Forecast(forecastCtx, forecastReq); err == nil && forecastResult != nil {
 				availableImpressions = forecastResult.AvailableImpressions
-				s.logger.Info("Forecasting SUCCESS", 
+				s.logger.Debug("Forecast completed",
 					zap.String("placement_id", placement.ID),
 					zap.Int64("available_impressions", availableImpressions),
-					zap.Int64("estimated_impressions", forecastResult.EstimatedImpressions),
 					zap.Float64("fill_rate", forecastResult.FillRate))
 			} else {
-				s.logger.Error("Forecasting FAILED", 
+				s.logger.Warn("Forecast failed, using default",
 					zap.String("placement_id", placement.ID),
 					zap.Error(err),
-					zap.Int64("using_default", availableImpressions))
+					zap.Int64("default_impressions", availableImpressions))
 			}
 		} else {
-			s.logger.Warn("Forecasting engine not available", 
+			s.logger.Debug("Forecasting engine not available, using default",
 				zap.String("placement_id", placement.ID),
-				zap.Int64("using_default", availableImpressions))
+				zap.Int64("default_impressions", availableImpressions))
 		}
 
 		product := Product{
@@ -217,8 +247,81 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 	return nil, GetProductsOutput{Products: products}, nil
 }
 
-// CreateMediaBuy implements the AdCP create_media_buy task  
+// CreateMediaBuy implements the AdCP create_media_buy task
 func (s *AdCPServer) CreateMediaBuy(ctx context.Context, req *mcp.CallToolRequest, input CreateMediaBuyInput) (*mcp.CallToolResult, CreateMediaBuyOutput, error) {
+	// Validate required inputs
+	if input.Name == "" {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid name: campaign name is required",
+			}},
+		}, CreateMediaBuyOutput{}, nil
+	}
+
+	if input.PublisherID <= 0 {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid publisher_id: must be a positive integer",
+			}},
+		}, CreateMediaBuyOutput{}, nil
+	}
+
+	if input.Budget <= 0 {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid budget: must be greater than 0",
+			}},
+		}, CreateMediaBuyOutput{}, nil
+	}
+
+	if input.PlacementID == "" {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid placement_id: placement ID is required",
+			}},
+		}, CreateMediaBuyOutput{}, nil
+	}
+
+	// Validate budget type
+	validTypes := []string{"cpm", "cpc", "flat"}
+	budgetType := strings.ToLower(input.BudgetType)
+	isValid := false
+	for _, validType := range validTypes {
+		if budgetType == validType {
+			isValid = true
+			break
+		}
+	}
+	if !isValid {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid budget_type: must be one of 'cpm', 'cpc', or 'flat'",
+			}},
+		}, CreateMediaBuyOutput{}, nil
+	}
+	// Validate placement exists for this publisher
+	allPlacements := s.adDataStore.GetAllPlacements()
+	var placement *models.Placement
+	for _, p := range allPlacements {
+		if p.ID == input.PlacementID && p.PublisherID == input.PublisherID {
+			placement = &p
+			break
+		}
+	}
+	if placement == nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: fmt.Sprintf("Placement '%s' not found for publisher %d", input.PlacementID, input.PublisherID),
+			}},
+		}, CreateMediaBuyOutput{}, nil
+	}
+
 	// Create campaign using database
 	campaign := &models.Campaign{
 		Name:        input.Name,
@@ -226,7 +329,16 @@ func (s *AdCPServer) CreateMediaBuy(ctx context.Context, req *mcp.CallToolReques
 	}
 
 	if err := s.pg.InsertCampaign(campaign); err != nil {
-		return nil, CreateMediaBuyOutput{}, fmt.Errorf("failed to create campaign: %w", err)
+		s.logger.Error("Failed to create campaign",
+			zap.String("campaign_name", input.Name),
+			zap.Int("publisher_id", input.PublisherID),
+			zap.Error(err))
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Failed to create campaign. Please check your publisher ID and try again.",
+			}},
+		}, CreateMediaBuyOutput{}, nil
 	}
 
 	// Create a basic line item
@@ -249,13 +361,30 @@ func (s *AdCPServer) CreateMediaBuy(ctx context.Context, req *mcp.CallToolReques
 		lineItem.CPM = input.Budget / 1000 // Convert to CPM rate
 		lineItem.ECPM = lineItem.CPM
 	} else if strings.ToLower(input.BudgetType) == "cpc" {
-		lineItem.CPC = 1.0 // Default $1 CPC
+		lineItem.CPC = 1.0                         // Default $1 CPC
 		lineItem.ECPM = lineItem.CPC * 0.02 * 1000 // Assume 2% CTR
 	}
 
 	if err := s.pg.InsertLineItem(lineItem); err != nil {
-		return nil, CreateMediaBuyOutput{}, fmt.Errorf("failed to create line item: %w", err)
+		s.logger.Error("Failed to create line item",
+			zap.String("line_item_name", lineItem.Name),
+			zap.Int("campaign_id", campaign.ID),
+			zap.Error(err))
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Failed to create line item. The campaign was created but could not be fully configured.",
+			}},
+		}, CreateMediaBuyOutput{}, nil
 	}
+
+	s.logger.Info("Successfully created media buy",
+		zap.String("campaign_name", input.Name),
+		zap.Int("campaign_id", campaign.ID),
+		zap.Int("line_item_id", lineItem.ID),
+		zap.String("placement_id", input.PlacementID),
+		zap.Float64("budget", input.Budget),
+		zap.String("budget_type", input.BudgetType))
 
 	return nil, CreateMediaBuyOutput{
 		CampaignID: campaign.ID,
@@ -270,7 +399,7 @@ func main() {
 	cfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
 	cfg.OutputPaths = []string{"stderr"}      // Force stderr output
 	cfg.ErrorOutputPaths = []string{"stderr"} // Force stderr for errors
-	
+
 	// Use same encoder config as observability package for consistency
 	cfg.EncoderConfig.TimeKey = "ts"
 	cfg.EncoderConfig.LevelKey = "level"
@@ -278,16 +407,16 @@ func main() {
 	cfg.EncoderConfig.CallerKey = "caller"
 	cfg.EncoderConfig.MessageKey = "msg"
 	cfg.EncoderConfig.StacktraceKey = "stacktrace"
-	
+
 	logger, err := cfg.Build()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	// Add service name as a permanent field for consistency
 	logger = logger.Named("openadserve-mcp").With(zap.String("service", "openadserve-mcp"))
-	
+
 	logger.Info("Starting OpenAdServe MCP Server - NEW VERSION")
 
 	// Initialize database connections
@@ -312,7 +441,7 @@ func main() {
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
 	})
-	defer redisClient.Close()
+	defer func() { _ = redisClient.Close() }()
 	logger.Info("Connected to Redis", zap.String("addr", redisAddr))
 
 	// Initialize ClickHouse connection (for forecasting)
@@ -320,7 +449,7 @@ func main() {
 	if clickhouseDSN == "" {
 		clickhouseDSN = "clickhouse://default:@localhost:9000/default"
 	}
-	
+
 	// Properly initialize ClickHouse
 	clickhouseDB, err := sql.Open("clickhouse", clickhouseDSN)
 	if err != nil {
@@ -330,11 +459,11 @@ func main() {
 		clickhouseDB.SetMaxOpenConns(25)
 		if err := clickhouseDB.PingContext(context.Background()); err != nil {
 			logger.Warn("ClickHouse ping failed, forecasting will use defaults", zap.Error(err))
-			clickhouseDB.Close()
+			_ = clickhouseDB.Close()
 			clickhouseDB = nil
 		} else {
 			logger.Info("ClickHouse connected successfully for forecasting")
-			defer clickhouseDB.Close()
+			defer func() { _ = clickhouseDB.Close() }()
 		}
 	}
 
@@ -359,17 +488,17 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to load placements", zap.Error(err))
 	}
-	
-	logger.Info("Loaded data from Postgres", 
+
+	logger.Info("Loaded data from Postgres",
 		zap.Int("line_items", len(items)),
 		zap.Int("campaigns", len(campaigns)),
 		zap.Int("publishers", len(publishers)),
 		zap.Int("placements", len(placements)))
-	
+
 	if err := adDataStore.ReloadAll(items, campaigns, publishers, placements); err != nil {
 		logger.Fatal("Failed to populate ad data store", zap.Error(err))
 	}
-	
+
 	logger.Info("Ad data store populated successfully")
 
 	// Initialize forecasting engine
@@ -477,16 +606,16 @@ func main() {
 
 	// Run the MCP server with logging transport for debugging
 	stdioTransport := &mcp.StdioTransport{}
-	
+
 	// Add logging transport to debug MCP communication
 	var logBuffer bytes.Buffer
 	loggingTransport := &mcp.LoggingTransport{
 		Transport: stdioTransport,
 		Writer:    &logBuffer,
 	}
-	
+
 	logger.Info("MCP Server running via stdio with logging enabled")
-	
+
 	if err := server.Run(context.Background(), loggingTransport); err != nil {
 		logger.Fatal("Server error", zap.Error(err), zap.String("mcp_logs", logBuffer.String()))
 	}

@@ -13,6 +13,7 @@ A lightweight, single-instance ad server with **pluggable ad selection logic** a
 - **CTR Optimization**: Optional ML predictor for context-aware CPC optimization
 - **Header Bidding**: Optional Prebid Server integration for programmatic demand
 - **Ad Quality Control**: User reporting system for publisher content control
+- **AI-Powered Automation**: AdCP (Ad Context Protocol) support for natural language advertising workflows
 - **Analytics**: ClickHouse storage, Prometheus metrics, Grafana dashboards
 - **Integration**: JavaScript SDK, server-to-server API, traffic simulator
 
@@ -66,6 +67,7 @@ Complete documentation is available in the [docs](docs/) folder:
 - [Multi-Tenancy](docs/architecture/multi_tenancy.md) - Multi-publisher configuration
 
 **Features:**
+- [AdCP Integration](docs/adcp-integration.md) - AI-powered advertising automation via Ad Context Protocol
 - [Analytics and Reporting](docs/features/analytics.md) - ClickHouse integration and metrics
 - [CTR Optimization](docs/features/ctr_optimization.md) - Machine learning CTR prediction
 - [Click URLs](docs/features/click_urls.md) - Click URL management and macro expansion
