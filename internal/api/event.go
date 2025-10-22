@@ -115,7 +115,7 @@ func (s *Server) EventHandler(w http.ResponseWriter, r *http.Request) {
 		KeyValues:  make(map[string]string), // Events don't have key-values
 	}
 
-	if err := s.Analytics.RecordEvent(r.Context(), s.AdDataStore, evType, payload.RequestID, payload.ImpID, payload.CrID, lineItemID, 0, targetingCtx, publisherID); err != nil {
+	if err := s.Analytics.RecordEvent(r.Context(), s.AdDataStore, evType, payload.RequestID, payload.ImpID, payload.CrID, lineItemID, 0, targetingCtx, publisherID, payload.PlacementID); err != nil {
 		s.Logger.Error("analytics record", zap.Error(err))
 		s.Metrics.RecordRequestLatency(endpoint, method, time.Since(start))
 		http.Error(w, "analytics error", http.StatusInternalServerError)
