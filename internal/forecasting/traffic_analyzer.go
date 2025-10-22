@@ -117,6 +117,7 @@ func buildTrafficQuery(req *models.ForecastRequest) (string, []interface{}) {
 		SELECT 
 			toStartOfFifteenMinutes(timestamp) as time_window,
 			publisher_id,
+			placement_id,
 			request_id,
 			imp_id,
 			device_type,
@@ -151,7 +152,7 @@ func buildTrafficQuery(req *models.ForecastRequest) (string, []interface{}) {
 	SELECT 
 		o.time_window,
 		o.publisher_id,
-		'' as placement_id,
+		o.placement_id,
 		o.country,
 		o.device_type,
 		toString(o.key_values) as key_values_json,
@@ -186,6 +187,16 @@ func buildTrafficQuery(req *models.ForecastRequest) (string, []interface{}) {
 		conditions = append(conditions, fmt.Sprintf("AND o.device_type IN (%s)", strings.Join(placeholders, ",")))
 	}
 
+	// Add placement_id filters with parameters
+	if len(req.PlacementIDs) > 0 {
+		placeholders := make([]string, len(req.PlacementIDs))
+		for i, p := range req.PlacementIDs {
+			placeholders[i] = "?"
+			args = append(args, p)
+		}
+		conditions = append(conditions, fmt.Sprintf("AND o.placement_id IN (%s)", strings.Join(placeholders, ",")))
+	}
+
 	// Add key-value filters with parameters
 	for k, v := range req.KeyValues {
 		conditions = append(conditions, "AND o.key_values[?] = ?")
@@ -201,7 +212,7 @@ func buildTrafficQuery(req *models.ForecastRequest) (string, []interface{}) {
 	GROUP BY 
 		o.time_window,
 		o.publisher_id,
-		placement_id,
+		o.placement_id,
 		o.country,
 		o.device_type,
 		o.key_values

@@ -132,7 +132,7 @@ func (s *Server) ImpressionHandler(w http.ResponseWriter, r *http.Request) {
 	deviceType, country := logic.ResolveTargetingFromRequest(r, s.GeoIP)
 
 	// Record the impression in ClickHouse for analytics.
-	if err := s.Analytics.RecordImpression(ctx, s.AdDataStore, payload.RequestID, payload.ImpID, payload.CrID, lineItemID, deviceType, country, publisherID); err != nil {
+	if err := s.Analytics.RecordImpression(ctx, s.AdDataStore, payload.RequestID, payload.ImpID, payload.CrID, lineItemID, deviceType, country, publisherID, payload.PlacementID); err != nil {
 		logger.Error("analytics record", zap.Error(err))
 		s.Metrics.IncrementImpressions("500")
 		s.Metrics.RecordRequestLatency(endpoint, method, time.Since(start))

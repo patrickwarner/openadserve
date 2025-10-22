@@ -142,7 +142,7 @@ func (s *Server) GetAdHandler(w http.ResponseWriter, r *http.Request) {
 		attribute.String("ip_address", ipStr),
 	)
 
-	if err := s.Analytics.RecordEvent(ctx, s.AdDataStore, "ad_request", req.ID, req.Imp[0].ID, "", 0, 0, targetingCtx, req.Ext.PublisherID); err != nil {
+	if err := s.Analytics.RecordEvent(ctx, s.AdDataStore, "ad_request", req.ID, req.Imp[0].ID, "", 0, 0, targetingCtx, req.Ext.PublisherID, placementID); err != nil {
 		logger.Error("analytics record", zap.Error(err))
 		s.Metrics.IncrementRequests(endpoint, method, "500")
 		s.Metrics.RecordRequestLatency(endpoint, method, time.Since(start))
@@ -177,7 +177,7 @@ func (s *Server) GetAdHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// no-bid path
 		span.SetAttributes(attribute.String("ad.result", "no_bid"))
-		if err := s.Analytics.RecordEvent(ctx, s.AdDataStore, "no_ad", req.ID, req.Imp[0].ID, "", 0, 0, targetingCtx, req.Ext.PublisherID); err != nil {
+		if err := s.Analytics.RecordEvent(ctx, s.AdDataStore, "no_ad", req.ID, req.Imp[0].ID, "", 0, 0, targetingCtx, req.Ext.PublisherID, placementID); err != nil {
 			logger.Error("analytics record", zap.Error(err))
 			s.Metrics.IncrementRequests(endpoint, method, "500")
 			s.Metrics.RecordRequestLatency(endpoint, method, time.Since(start))
@@ -222,7 +222,7 @@ func (s *Server) GetAdHandler(w http.ResponseWriter, r *http.Request) {
 	if len(ad.Native) > 0 {
 		adm = string(ad.Native)
 	}
-	tok, err := token.GenerateWithCustomParams(req.ID, req.Imp[0].ID, fmt.Sprintf("%d", ad.CreativeID), fmt.Sprintf("%d", ad.CampaignID), fmt.Sprintf("%d", ad.LineItemID), userID, fmt.Sprintf("%d", req.Ext.PublisherID), req.Ext.CustomParams, s.TokenSecret)
+	tok, err := token.GenerateWithAuctionData(req.ID, req.Imp[0].ID, fmt.Sprintf("%d", ad.CreativeID), fmt.Sprintf("%d", ad.CampaignID), fmt.Sprintf("%d", ad.LineItemID), userID, fmt.Sprintf("%d", req.Ext.PublisherID), placementID, ad.Price, "USD", req.Ext.CustomParams, s.TokenSecret)
 	if err != nil {
 		logger.Error("failed to generate token", zap.Error(err), zap.String("request_id", req.ID))
 		s.Metrics.IncrementRequests(endpoint, method, "500")
@@ -251,7 +251,7 @@ func (s *Server) GetAdHandler(w http.ResponseWriter, r *http.Request) {
 			}},
 		}},
 	}
-	if err := s.Analytics.RecordEvent(ctx, s.AdDataStore, "ad_served", req.ID, req.Imp[0].ID, fmt.Sprintf("%d", ad.CreativeID), ad.LineItemID, 0, targetingCtx, req.Ext.PublisherID); err != nil {
+	if err := s.Analytics.RecordEvent(ctx, s.AdDataStore, "ad_served", req.ID, req.Imp[0].ID, fmt.Sprintf("%d", ad.CreativeID), ad.LineItemID, 0, targetingCtx, req.Ext.PublisherID, placementID); err != nil {
 		logger.Error("analytics record", zap.Error(err))
 		s.Metrics.IncrementRequests(endpoint, method, "500")
 		s.Metrics.RecordRequestLatency(endpoint, method, time.Since(start))

@@ -1,8 +1,8 @@
-# Build stage
-FROM golang:1.24-alpine AS builder
+# Single stage build with Go toolchain
+FROM golang:1.24-alpine
 
-# Install build dependencies
-RUN apk add --no-cache git
+# Install dependencies
+RUN apk add --no-cache git ca-certificates
 
 WORKDIR /app
 
@@ -13,23 +13,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build with optimizations for smaller binary
+# Build binaries
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o openadserve ./cmd/server/main.go
-
-# Runtime stage
-FROM alpine:latest
-
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /app
-
-# Copy binary from builder
-COPY --from=builder /app/openadserve .
-
-# Copy necessary data files
-COPY --from=builder /app/data ./data
-COPY --from=builder /app/static ./static
 
 EXPOSE 8787
 
