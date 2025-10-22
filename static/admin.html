@@ -469,7 +469,7 @@
                         <input type="number" name="cpc" id="cpc-field" placeholder="CPC" step="0.01" min="0" style="display:none;">
                         
                         <!-- Publisher and Priority -->
-                        <select name="publisher_id" required>
+                        <select name="publisher_id" required onchange="loadPlacementsForForecast(this)">
                             <option value="">Select Publisher</option>
                         </select>
                         <select name="priority">
@@ -477,6 +477,11 @@
                             <option value="0">High (0)</option>
                             <option value="1">Medium (1)</option>
                             <option value="2">Low (2)</option>
+                        </select>
+                        
+                        <!-- Placement Selection -->
+                        <select name="placement_ids" id="forecast-placement-select" class="form-full" multiple style="height: 80px;">
+                            <option value="">Select Placements (Optional - hold Ctrl/Cmd for multiple)</option>
                         </select>
                         
                         <!-- Targeting Options -->
@@ -497,6 +502,7 @@
                         <div class="help-text">
                             <strong>Forecasting Help:</strong><br>
                             • <strong>Budget Type:</strong> CPM charges per 1000 impressions, CPC charges per click, Flat is a one-time budget<br>
+                            • <strong>Placements:</strong> Leave empty for publisher-wide forecasting, or select specific placements<br>
                             • <strong>Countries:</strong> Use ISO country codes (US, CA, UK, etc.)<br>
                             • <strong>Key-Values:</strong> Custom targeting parameters in JSON format<br>
                             • <strong>Priority:</strong> Lower numbers = higher priority (0 beats 1 beats 2)
@@ -892,6 +898,52 @@
             // Hide budget type specific fields
             document.getElementById('cpm-field').style.display = 'none';
             document.getElementById('cpc-field').style.display = 'none';
+            
+            // Clear placement dropdown
+            const placementSelect = document.getElementById('forecast-placement-select');
+            placementSelect.innerHTML = '<option value="">Select Placements (Optional - hold Ctrl/Cmd for multiple)</option>';
+        }
+        
+        async function loadPlacementsForForecast(publisherSelect) {
+            const publisherId = publisherSelect.value;
+            const placementSelect = document.getElementById('forecast-placement-select');
+            
+            // Clear existing options
+            placementSelect.innerHTML = '<option value="">Select Placements (Optional - hold Ctrl/Cmd for multiple)</option>';
+            
+            if (!publisherId) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/placements');
+                const placements = await response.json();
+                
+                // Filter placements by selected publisher
+                const publisherPlacements = placements.filter(p => p.publisher_id == publisherId);
+                
+                publisherPlacements.forEach(placement => {
+                    const option = document.createElement('option');
+                    option.value = placement.id;
+                    option.textContent = `${placement.id} (${placement.width}x${placement.height})`;
+                    placementSelect.appendChild(option);
+                });
+                
+                if (publisherPlacements.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No placements found for this publisher';
+                    option.disabled = true;
+                    placementSelect.appendChild(option);
+                }
+            } catch (err) {
+                console.error('Failed to load placements:', err);
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Error loading placements';
+                option.disabled = true;
+                placementSelect.appendChild(option);
+            }
         }
 
         async function runForecast(event) {
@@ -917,6 +969,11 @@
                     data[key] = parseInt(value) || 0;
                 } else if (key === 'countries' || key === 'device_types') {
                     data[key] = value ? value.split(',').map(s => s.trim()).filter(s => s) : [];
+                } else if (key === 'placement_ids') {
+                    // Handle multiple selected placement IDs
+                    const select = form.querySelector('select[name="placement_ids"]');
+                    const selectedOptions = Array.from(select.selectedOptions);
+                    data[key] = selectedOptions.map(option => option.value).filter(v => v !== '');
                 } else if (key === 'key_values') {
                     try {
                         data[key] = value ? JSON.parse(value) : {};

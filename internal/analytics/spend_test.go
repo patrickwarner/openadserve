@@ -17,7 +17,7 @@ func TestRecordImpression_CPMSpend(t *testing.T) {
 
 	a := &Analytics{Metrics: observability.NewNoOpRegistry()}
 	// Add context.Background() to calls
-	if err := a.RecordImpression(context.Background(), testStore, "req1", "1", "1", 1, "mobile", "US", 1); err != nil && err != ErrUnavailable {
+	if err := a.RecordImpression(context.Background(), testStore, "req1", "1", "1", 1, "mobile", "US", 1, "test-placement"); err != nil && err != ErrUnavailable {
 		t.Fatalf("record impression: %v", err)
 	}
 	li := models.GetLineItemByID(testStore, 1)
@@ -27,7 +27,7 @@ func TestRecordImpression_CPMSpend(t *testing.T) {
 	}
 	// Metrics are now handled by NoOpRegistry - no assertions needed
 
-	if err := a.RecordImpression(context.Background(), testStore, "req2", "1", "1", 1, "mobile", "US", 1); err != nil && err != ErrUnavailable {
+	if err := a.RecordImpression(context.Background(), testStore, "req2", "1", "1", 1, "mobile", "US", 1, "test-placement"); err != nil && err != ErrUnavailable {
 		t.Fatalf("record impression: %v", err)
 	}
 	want = 2 * (2.0 / 1000)
@@ -45,7 +45,7 @@ func TestRecordImpression_FlatSpend(t *testing.T) {
 	})
 
 	a := &Analytics{Metrics: observability.NewNoOpRegistry()}
-	if err := a.RecordImpression(context.Background(), testStore, "req1", "1", "1", 2, "mobile", "US", 1); err != nil && err != ErrUnavailable {
+	if err := a.RecordImpression(context.Background(), testStore, "req1", "1", "1", 2, "mobile", "US", 1, "test-placement"); err != nil && err != ErrUnavailable {
 		t.Fatalf("record impression: %v", err)
 	}
 	li := models.GetLineItemByID(testStore, 2)
@@ -55,7 +55,7 @@ func TestRecordImpression_FlatSpend(t *testing.T) {
 	}
 	// Metrics are now handled by NoOpRegistry - no assertions needed
 
-	if err := a.RecordImpression(context.Background(), testStore, "req2", "1", "1", 2, "mobile", "US", 1); err != nil && err != ErrUnavailable {
+	if err := a.RecordImpression(context.Background(), testStore, "req2", "1", "1", 2, "mobile", "US", 1, "test-placement"); err != nil && err != ErrUnavailable {
 		t.Fatalf("record impression: %v", err)
 	}
 	if li.Spend != want {

@@ -24,17 +24,17 @@ func NewMockAnalytics() *MockAnalytics {
 }
 
 // RecordEvent records a custom event (mock implementation)
-func (m *MockAnalytics) RecordEvent(ctx context.Context, dataStore models.AdDataStore, eventType, requestID, impID, creativeID string, lineItemID int, cost float64, targetingCtx models.TargetingContext, publisherID int) error {
+func (m *MockAnalytics) RecordEvent(ctx context.Context, dataStore models.AdDataStore, eventType, requestID, impID, creativeID string, lineItemID int, cost float64, targetingCtx models.TargetingContext, publisherID int, placementID string) error {
 	return nil
 }
 
 // RecordImpression records an impression event (mock implementation)
-func (m *MockAnalytics) RecordImpression(ctx context.Context, dataStore models.AdDataStore, requestID, impID, creativeID string, lineItemID int, deviceType, country string, publisherID int) error {
+func (m *MockAnalytics) RecordImpression(ctx context.Context, dataStore models.AdDataStore, requestID, impID, creativeID string, lineItemID int, deviceType, country string, publisherID int, placementID string) error {
 	return nil
 }
 
 // RecordClick records a click event (mock implementation)
-func (m *MockAnalytics) RecordClick(ctx context.Context, dataStore models.AdDataStore, requestID, impID, creativeID string, lineItemID int, deviceType, country string, publisherID int) error {
+func (m *MockAnalytics) RecordClick(ctx context.Context, dataStore models.AdDataStore, requestID, impID, creativeID string, lineItemID int, deviceType, country string, publisherID int, placementID string) error {
 	return nil
 }
 

@@ -132,7 +132,7 @@ func (s *Server) ClickHandler(w http.ResponseWriter, r *http.Request) {
 	deviceType, country := logic.ResolveTargetingFromRequest(r, s.GeoIP)
 
 	// Record click analytics
-	if err := s.Analytics.RecordClick(ctx, s.AdDataStore, payload.RequestID, payload.ImpID, payload.CrID, lineItemID, deviceType, country, publisherID); err != nil {
+	if err := s.Analytics.RecordClick(ctx, s.AdDataStore, payload.RequestID, payload.ImpID, payload.CrID, lineItemID, deviceType, country, publisherID, payload.PlacementID); err != nil {
 		logger.Error("analytics record", zap.Error(err))
 		s.Metrics.IncrementRequests(endpoint, method, "500")
 		s.Metrics.RecordRequestLatency(endpoint, method, time.Since(start))

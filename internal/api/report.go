@@ -118,7 +118,7 @@ func (s *Server) ReportHandler(w http.ResponseWriter, r *http.Request) {
 			KeyValues:  make(map[string]string), // Reports don't have key-values
 		}
 
-		_ = s.Analytics.RecordEvent(r.Context(), s.AdDataStore, "ad_report", pl.RequestID, pl.ImpID, pl.CrID, atoi(pl.LIID), 0, targetingCtx, publisherID)
+		_ = s.Analytics.RecordEvent(r.Context(), s.AdDataStore, "ad_report", pl.RequestID, pl.ImpID, pl.CrID, atoi(pl.LIID), 0, targetingCtx, publisherID, pl.PlacementID)
 	}
 	s.Metrics.IncrementEvent("ad_report")
 	s.Metrics.RecordRequestLatency(endpoint, method, time.Since(start))
