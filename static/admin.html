@@ -5,180 +5,284 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ad Server Admin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            margin: 0; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', sans-serif;
+            margin: 0;
+            background: #fafafa;
             min-height: 100vh;
-            color: #333;
+            color: #0a0a0a;
+            line-height: 1.5;
         }
-        .container { 
-            max-width: 1400px; 
-            margin: 0 auto; 
-            padding: 20px;
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
         }
         .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
+            margin-bottom: 32px;
+            border-bottom: 1px solid #e5e5e5;
+            padding-bottom: 24px;
         }
         .header h1 {
-            font-size: 2.5rem;
+            font-size: 2rem;
             margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: #0a0a0a;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
+        }
+        .header h1::before {
+            content: '$ ';
+            color: #737373;
+            font-weight: 400;
         }
         .header p {
-            opacity: 0.9;
-            margin: 10px 0 0 0;
-            font-size: 1.1rem;
+            margin: 6px 0 0 0;
+            font-size: 0.875rem;
+            color: #737373;
+            font-weight: 400;
         }
-        .section { 
-            background: white; 
-            margin: 20px 0; 
-            padding: 25px; 
-            border-radius: 12px; 
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+
+        /* Global Publisher Filter */
+        .global-filter {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .global-filter.active {
+            background: #dcfce7;
+            border-color: #bbf7d0;
+        }
+        .global-filter-label {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #525252;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .global-filter-select {
+            padding: 6px 10px;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-family: inherit;
+            background: white;
+            color: #0a0a0a;
+            min-width: 250px;
+            cursor: pointer;
+        }
+        .global-filter-select:focus {
+            outline: none;
+            border-color: #0a0a0a;
+        }
+        .global-filter-clear {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            color: #737373;
+            transition: all 0.15s ease;
+        }
+        .global-filter-clear:hover {
+            background: #fafafa;
+            color: #0a0a0a;
+            border-color: #d4d4d4;
+        }
+        .global-filter-clear:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .global-filter-info {
+            font-size: 0.75rem;
+            color: #737373;
+            margin-left: auto;
+        }
+        .section {
+            background: white;
+            margin: 16px 0;
+            padding: 24px;
+            border-radius: 6px;
+            border: 1px solid #e5e5e5;
         }
         .section h2 {
             margin: 0 0 20px 0;
-            color: #2c3e50;
-            font-size: 1.4rem;
+            color: #0a0a0a;
+            font-size: 0.875rem;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
-        .tabs { 
-            display: flex; 
-            margin-bottom: 30px; 
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: transparent;
+            border-bottom: 1px solid #e5e5e5;
+            padding-bottom: 0;
         }
-        .tab { 
-            flex: 1;
-            padding: 15px 20px; 
-            background: #f8f9fa; 
+        .tab {
+            padding: 10px 16px;
+            background: transparent;
             border: none;
-            cursor: pointer; 
-            transition: all 0.3s ease;
+            cursor: pointer;
+            transition: all 0.15s ease;
             font-weight: 500;
+            font-size: 0.875rem;
             text-align: center;
-            border-right: 1px solid #e9ecef;
+            color: #737373;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            text-decoration: none;
+            display: inline-block;
         }
-        .tab:last-child { border-right: none; }
-        .tab:hover { background: #e9ecef; }
-        .tab.active { background: #007cba; color: white; }
+        .tab:hover {
+            color: #0a0a0a;
+            background: #fafafa;
+        }
+        .tab.active {
+            color: #0a0a0a;
+            border-bottom-color: #0a0a0a;
+            background: transparent;
+        }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        .form-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 20px; 
-            margin-bottom: 20px;
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
         }
-        .form-grid input, .form-grid select, .form-grid textarea { 
-            width: 100%; 
-            padding: 12px;
-            border: 2px solid #e1e5e9;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
+        .form-grid input, .form-grid select, .form-grid textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-family: inherit;
+            transition: all 0.15s ease;
             background: #fff;
+            color: #0a0a0a;
         }
         .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus {
             outline: none;
-            border-color: #007cba;
-            box-shadow: 0 0 0 3px rgba(0,124,186,0.1);
+            border-color: #0a0a0a;
+            box-shadow: 0 0 0 2px rgba(10,10,10,0.1);
         }
         .form-full { grid-column: 1 / -1; }
         .help-text {
             grid-column: 1 / -1;
-            font-size: 0.9rem;
-            color: #555;
+            font-size: 0.75rem;
+            color: #737373;
+            line-height: 1.5;
         }
         .form-actions {
             grid-column: 1 / -1;
             text-align: center;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #e9ecef;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e5e5;
         }
-        
-        button { 
-            padding: 12px 24px; 
-            background: #007cba; 
-            color: white; 
-            border: none; 
-            border-radius: 6px;
-            cursor: pointer; 
+
+        button {
+            padding: 8px 16px;
+            background: #0a0a0a;
+            color: white;
+            border: 1px solid #0a0a0a;
+            border-radius: 4px;
+            cursor: pointer;
             font-weight: 500;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 0.875rem;
+            transition: all 0.15s ease;
+            font-family: inherit;
         }
-        button:hover { 
-            background: #005a8b; 
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,124,186,0.3);
+        button:hover {
+            background: #262626;
+            border-color: #262626;
         }
-        button:active { transform: translateY(0); }
-        
+        button:active {
+            transform: scale(0.98);
+        }
+
         .btn-refresh {
-            background: #28a745;
-            margin-bottom: 15px;
+            background: white;
+            color: #0a0a0a;
+            border: 1px solid #e5e5e5;
+            margin-bottom: 12px;
         }
-        .btn-refresh:hover { background: #218838; }
+        .btn-refresh:hover {
+            background: #fafafa;
+            border-color: #d4d4d4;
+        }
         
         .table-container {
             overflow-x: auto;
-            margin-top: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-top: 16px;
+            border-radius: 4px;
+            border: 1px solid #e5e5e5;
             background: white;
         }
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
+        table {
+            width: 100%;
+            border-collapse: collapse;
             background: white;
             min-width: 800px;
         }
-        th, td { 
-            padding: 12px 15px; 
-            text-align: left; 
-            border-bottom: 1px solid #e9ecef;
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #f5f5f5;
             white-space: nowrap;
+            font-size: 0.8125rem;
         }
-        th { 
-            background: #f8f9fa; 
+        th {
+            background: #fafafa;
             font-weight: 600;
-            color: #495057;
+            color: #525252;
             text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.5px;
+            font-size: 0.6875rem;
+            letter-spacing: 0.05em;
             position: sticky;
             top: 0;
             z-index: 10;
         }
-        tr:hover { background: #f8f9fa; }
-        tr:last-child td { border-bottom: none; }
-        
+        tr:hover {
+            background: #fafafa;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+
         /* Column width controls for better table layout */
-        th:first-child, td:first-child { width: 60px; } /* ID column */
-        .actions { width: 120px; text-align: center; }
-        
-        .actions button { 
-            margin: 2px; 
-            padding: 6px 12px; 
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
+        th:first-child, td:first-child {
+            width: 60px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.75rem;
+        }
+        .actions {
+            width: 100px;
+            text-align: right;
+        }
+
+        .actions button {
+            margin-left: 4px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
             white-space: nowrap;
         }
-        
+
         /* Truncate long text content */
         .text-truncate {
             max-width: 200px;
@@ -186,71 +290,228 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        .delete { background: #dc3545; }
-        .delete:hover { background: #c82333; }
-        .edit { background: #ffc107; color: #212529; }
-        .edit:hover { background: #e0a800; }
+        .delete {
+            background: white;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        .delete:hover {
+            background: #fef2f2;
+            border-color: #fca5a5;
+        }
+        .edit {
+            background: white;
+            color: #0a0a0a;
+            border: 1px solid #e5e5e5;
+        }
+        .edit:hover {
+            background: #fafafa;
+            border-color: #d4d4d4;
+        }
         
         .status-badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.6875rem;
+            font-weight: 500;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
         }
-        .status-active { background: #d4edda; color: #155724; }
-        .status-inactive { background: #f8d7da; color: #721c24; }
-        
+        .status-active {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .status-inactive {
+            background: #f5f5f5;
+            color: #737373;
+            border: 1px solid #e5e5e5;
+        }
+
         .empty-state {
             text-align: center;
-            padding: 40px;
-            color: #6c757d;
+            padding: 48px 24px;
+            color: #737373;
         }
-        .empty-state h3 { margin: 0 0 10px 0; }
-        
+        .empty-state h3 {
+            margin: 0 0 8px 0;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #0a0a0a;
+        }
+
         .loading {
             text-align: center;
-            padding: 20px;
-            color: #6c757d;
+            padding: 24px;
+            color: #737373;
+            font-size: 0.875rem;
         }
-        
+
         .success-message, .error-message {
-            padding: 12px 20px;
-            border-radius: 6px;
-            margin: 15px 0;
-            font-weight: 500;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin: 12px 0;
+            font-weight: 400;
+            font-size: 0.875rem;
         }
         .success-message {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
         }
         .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
         }
 
         .preview-panel {
             grid-column: 1 / -1;
-            border: 1px dashed #e1e5e9;
-            padding: 15px;
-            border-radius: 6px;
-            background: #f8f9fa;
-            margin-top: 10px;
+            border: 1px solid #e5e5e5;
+            padding: 16px;
+            border-radius: 4px;
+            background: #fafafa;
+            margin-top: 12px;
         }
-        
+
         label {
             display: flex;
             align-items: center;
             gap: 8px;
             font-weight: 500;
-            margin: 10px 0;
+            font-size: 0.875rem;
+            margin: 8px 0;
+            color: #0a0a0a;
         }
         input[type="checkbox"] {
             width: auto;
-            transform: scale(1.2);
+            transform: scale(1.1);
+            cursor: pointer;
+        }
+
+        /* Collapsible sections */
+        .form-section {
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            background: white;
+        }
+        .form-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+            background: #fafafa;
+            border-radius: 4px 4px 0 0;
+            transition: background 0.15s ease;
+        }
+        .form-section-header:hover {
+            background: #f5f5f5;
+        }
+        .form-section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #0a0a0a;
+        }
+        .form-section-title svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
+        }
+        .form-section-toggle {
+            font-size: 0.75rem;
+            color: #737373;
+            transition: transform 0.2s ease;
+        }
+        .form-section-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+        .form-section-content {
+            padding: 16px;
+            border-top: 1px solid #e5e5e5;
+        }
+        .form-section-content.collapsed {
+            display: none;
+        }
+
+        /* Macro helper */
+        .macro-helper {
+            margin-top: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .macro-helper-header {
+            padding: 12px;
+            border-bottom: 1px solid #e5e5e5;
+            font-weight: 600;
+            font-size: 0.8125rem;
+            color: #0a0a0a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .macro-helper-header svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
+        }
+        .macro-table {
+            width: 100%;
+            font-size: 0.75rem;
+        }
+        .macro-table th {
+            text-align: left;
+            padding: 8px 12px;
+            background: #fafafa;
+            font-weight: 600;
+            color: #525252;
+            text-transform: uppercase;
+            font-size: 0.6875rem;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .macro-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .macro-table tr:last-child td {
+            border-bottom: none;
+        }
+        .macro-table tr:hover {
+            background: white;
+        }
+        .macro-code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            background: white;
+            border: 1px solid #e5e5e5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.6875rem;
+            cursor: pointer;
+            display: inline-block;
+            transition: all 0.15s ease;
+        }
+        .macro-code:hover {
+            background: #0a0a0a;
+            color: white;
+            border-color: #0a0a0a;
+        }
+        .macro-description {
+            color: #525252;
+            line-height: 1.4;
+        }
+        .macro-use-case {
+            color: #737373;
+            font-size: 0.6875rem;
+            font-style: italic;
         }
         
         @media (max-width: 768px) {
@@ -262,6 +523,104 @@
             table { font-size: 14px; }
             th, td { padding: 8px 10px; }
         }
+
+        /* Grid.js customization to match our theme */
+        .gridjs-wrapper {
+            border-radius: 4px;
+            border: 1px solid #e5e5e5;
+            overflow-x: auto;
+            overflow-y: visible;
+            box-shadow: none;
+        }
+        .gridjs-container {
+            overflow-x: auto;
+        }
+        .gridjs-head {
+            background: #fafafa !important;
+        }
+        .gridjs-table {
+            min-width: 100%;
+            width: max-content;
+        }
+        .gridjs-th {
+            background: #fafafa !important;
+            color: #525252 !important;
+            font-weight: 600 !important;
+            text-transform: uppercase;
+            font-size: 0.6875rem !important;
+            letter-spacing: 0.05em;
+            padding: 10px 12px !important;
+            border-bottom: 1px solid #e5e5e5 !important;
+            white-space: nowrap;
+        }
+        .gridjs-td {
+            padding: 10px 12px !important;
+            border-bottom: 1px solid #f5f5f5 !important;
+            font-size: 0.8125rem !important;
+            white-space: nowrap;
+        }
+        .gridjs-tr:hover {
+            background: #fafafa !important;
+        }
+        .gridjs-search {
+            margin-bottom: 16px;
+        }
+        .gridjs-search-input {
+            padding: 10px 14px;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            width: 100%;
+            max-width: 400px;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+        .gridjs-search-input::placeholder {
+            color: #a3a3a3;
+        }
+        .gridjs-search-input:focus {
+            outline: none;
+            border-color: #0a0a0a;
+            box-shadow: 0 0 0 2px rgba(10,10,10,0.1);
+        }
+        .gridjs-footer {
+            padding: 12px;
+            background: #fafafa;
+            border-top: 1px solid #e5e5e5;
+        }
+        .gridjs-pagination {
+            color: #737373;
+            font-size: 0.8125rem;
+        }
+        .gridjs-pagination button {
+            background: white;
+            border: 1px solid #e5e5e5;
+            color: #0a0a0a;
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin: 0 2px;
+            font-size: 0.8125rem;
+            font-family: inherit;
+        }
+        .gridjs-pagination button:hover:not(:disabled) {
+            background: #fafafa;
+            border-color: #d4d4d4;
+        }
+        .gridjs-pagination button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .gridjs-pagination .gridjs-currentPage {
+            background: #0a0a0a;
+            color: white;
+            border-color: #0a0a0a;
+        }
+        .gridjs-th-sort {
+            cursor: pointer;
+        }
+        .gridjs-sort-neutral::after {
+            opacity: 0.3;
+        }
     </style>
 </head>
 <body>
@@ -270,14 +629,24 @@
             <h1>Ad Server Admin</h1>
             <p>Internal trafficking tool for development and testing</p>
         </div>
-        
+
+        <!-- Global Publisher Filter -->
+        <div class="global-filter" id="global-filter">
+            <span class="global-filter-label">Working with:</span>
+            <select class="global-filter-select" id="global-publisher-select" onchange="handleGlobalPublisherChange()">
+                <option value="">All Publishers</option>
+            </select>
+            <button class="global-filter-clear" id="global-filter-clear-btn" onclick="clearGlobalPublisher()" disabled>Clear Filter</button>
+            <span class="global-filter-info" id="global-filter-info"></span>
+        </div>
+
         <div class="tabs">
-            <div class="tab active" onclick="showTab('publishers')">Publishers</div>
-            <div class="tab" onclick="showTab('placements')">Placements</div>
-            <div class="tab" onclick="showTab('campaigns')">Campaigns</div>
-            <div class="tab" onclick="showTab('line_items')">Line Items</div>
-            <div class="tab" onclick="showTab('creatives')">Creatives</div>
-            <div class="tab" onclick="showTab('forecasting')">Forecasting</div>
+            <a href="#publishers" class="tab active" onclick="showTab('publishers', event)">Publishers</a>
+            <a href="#placements" class="tab" onclick="showTab('placements', event)">Placements</a>
+            <a href="#campaigns" class="tab" onclick="showTab('campaigns', event)">Campaigns</a>
+            <a href="#line_items" class="tab" onclick="showTab('line_items', event)">Line Items</a>
+            <a href="#creatives" class="tab" onclick="showTab('creatives', event)">Creatives</a>
+            <a href="#forecasting" class="tab" onclick="showTab('forecasting', event)">Forecasting</a>
         </div>
 
         <!-- Publishers Tab -->
@@ -354,48 +723,198 @@
         <div id="line_items" class="tab-content">
             <div class="section">
                 <h2>Create Line Item</h2>
-                <form onsubmit="createEntity('line_items', event)">
-                    <div class="form-grid">
-                        <select name="campaign_id" required>
-                            <option value="">Select Campaign</option>
-                        </select>
-                        <select name="publisher_id" required>
-                            <option value="">Select Publisher</option>
-                        </select>
-                        <input type="text" name="name" placeholder="Line Item Name" required class="form-full">
-                        <input type="date" name="start_date" required>
-                        <input type="date" name="end_date" required>
-                        <input type="number" name="daily_impression_cap" placeholder="Daily Impression Cap">
-                        <input type="number" name="daily_click_cap" placeholder="Daily Click Cap">
-                        <select name="pace_type">
-                            <option value="asap">ASAP</option>
-                            <option value="even">Even</option>
-                            <option value="pid">PID</option>
-                        </select>
-                        <select name="priority">
-                            <option value="high">High</option>
-                            <option value="medium">Medium</option>
-                            <option value="low">Low</option>
-                        </select>
-                        <input type="number" name="frequency_cap" placeholder="Frequency Cap">
-                        <input type="text" name="country" placeholder="Country (e.g., US)">
-                        <input type="text" name="device_type" placeholder="Device Type (mobile/desktop/tablet)" class="form-full">
-                        <input type="number" step="0.01" name="cpm" placeholder="CPM">
-                        <input type="number" step="0.01" name="cpc" placeholder="CPC">
-                        <select name="budget_type">
-                            <option value="cpm">CPM</option>
-                            <option value="cpc">CPC</option>
-                            <option value="flat">Flat</option>
-                        </select>
-                        <input type="number" step="0.01" name="budget_amount" placeholder="Budget Amount">
-                        <input type="url" name="click_url" placeholder="Click URL (supports macros like {CREATIVE_ID}, {CAMPAIGN_ID}, {CUSTOM.key})" class="form-full">
-                        <div class="help-text">
-                            Supported macros: {AUCTION_ID}, {AUCTION_IMP_ID}, {CREATIVE_ID}, {LINE_ITEM_ID}, {CAMPAIGN_ID}, {PUBLISHER_ID}, {PLACEMENT_ID}, {TIMESTAMP}, {TIMESTAMP_MS}, {ISO_TIMESTAMP}, {RANDOM}, {UUID}. Use {CUSTOM.key} to include custom parameters from the ad request (e.g., {CUSTOM.user_segment}).
+                <form onsubmit="createEntity('line_items', event)" id="line-item-form">
+
+                    <!-- Basic Details Section -->
+                    <div class="form-section">
+                        <div class="form-section-header" onclick="toggleSection('basic-details')">
+                            <div class="form-section-title">
+                                <i data-lucide="file-text"></i>
+                                <span>Basic Details</span>
+                            </div>
+                            <span class="form-section-toggle" id="basic-details-toggle">▼</span>
                         </div>
-                        <div class="form-actions">
-                            <label><input type="checkbox" name="active"> Active</label><br>
-                            <button type="submit">Create Line Item</button>
+                        <div class="form-section-content" id="basic-details-content">
+                            <div class="form-grid">
+                                <select name="campaign_id" required>
+                                    <option value="">Select Campaign</option>
+                                </select>
+                                <select name="publisher_id" required>
+                                    <option value="">Select Publisher</option>
+                                </select>
+                                <input type="text" name="name" placeholder="Line Item Name" required class="form-full">
+                                <input type="date" name="start_date" required>
+                                <input type="date" name="end_date" required>
+                                <label class="form-full"><input type="checkbox" name="active" checked> Active</label>
+                            </div>
                         </div>
+                    </div>
+
+                    <!-- Budget & Pricing Section -->
+                    <div class="form-section">
+                        <div class="form-section-header" onclick="toggleSection('budget-pricing')">
+                            <div class="form-section-title">
+                                <i data-lucide="dollar-sign"></i>
+                                <span>Budget & Pricing</span>
+                            </div>
+                            <span class="form-section-toggle" id="budget-pricing-toggle">▼</span>
+                        </div>
+                        <div class="form-section-content" id="budget-pricing-content">
+                            <div class="form-grid">
+                                <select name="budget_type" id="budget_type" onchange="updateBudgetTypeFields()">
+                                    <option value="">Select Budget Type</option>
+                                    <option value="cpm">CPM (Cost per 1000 impressions)</option>
+                                    <option value="cpc">CPC (Cost per click)</option>
+                                    <option value="flat">Flat (One-time budget)</option>
+                                </select>
+                                <input type="number" step="0.01" name="budget_amount" placeholder="Budget Amount" id="budget_amount">
+                                <input type="number" step="0.01" name="cpm" placeholder="CPM Rate" id="cpm_field" style="display:none;">
+                                <input type="number" step="0.01" name="cpc" placeholder="CPC Rate" id="cpc_field" style="display:none;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Targeting Section -->
+                    <div class="form-section">
+                        <div class="form-section-header" onclick="toggleSection('targeting')">
+                            <div class="form-section-title">
+                                <i data-lucide="target"></i>
+                                <span>Targeting</span>
+                            </div>
+                            <span class="form-section-toggle collapsed" id="targeting-toggle">▼</span>
+                        </div>
+                        <div class="form-section-content collapsed" id="targeting-content">
+                            <div class="form-grid">
+                                <input type="text" name="country" placeholder="Country (e.g., US, CA, UK)">
+                                <input type="text" name="device_type" placeholder="Device Type (mobile, desktop, tablet)">
+                                <input type="number" name="frequency_cap" placeholder="Frequency Cap (impressions per user)" class="form-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Options Section -->
+                    <div class="form-section">
+                        <div class="form-section-header" onclick="toggleSection('advanced')">
+                            <div class="form-section-title">
+                                <i data-lucide="settings"></i>
+                                <span>Advanced Options</span>
+                            </div>
+                            <span class="form-section-toggle collapsed" id="advanced-toggle">▼</span>
+                        </div>
+                        <div class="form-section-content collapsed" id="advanced-content">
+                            <div class="form-grid">
+                                <select name="priority">
+                                    <option value="high">High Priority (0)</option>
+                                    <option value="medium" selected>Medium Priority (1)</option>
+                                    <option value="low">Low Priority (2)</option>
+                                </select>
+                                <select name="pace_type">
+                                    <option value="asap">ASAP (Deliver as fast as possible)</option>
+                                    <option value="even" selected>Even (Spread evenly throughout day)</option>
+                                    <option value="pid">PID (Adaptive pacing)</option>
+                                </select>
+                                <input type="number" name="daily_impression_cap" placeholder="Daily Impression Cap (optional)">
+                                <input type="number" name="daily_click_cap" placeholder="Daily Click Cap (optional)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tracking & Macros Section -->
+                    <div class="form-section">
+                        <div class="form-section-header" onclick="toggleSection('tracking')">
+                            <div class="form-section-title">
+                                <i data-lucide="link"></i>
+                                <span>Tracking & Macros</span>
+                            </div>
+                            <span class="form-section-toggle collapsed" id="tracking-toggle">▼</span>
+                        </div>
+                        <div class="form-section-content collapsed" id="tracking-content">
+                            <div class="form-grid">
+                                <input type="url" name="click_url" id="click_url_field" placeholder="Click URL (e.g., https://example.com/track)" class="form-full">
+
+                                <div class="macro-helper form-full">
+                                    <div class="macro-helper-header">
+                                        <i data-lucide="code"></i>
+                                        <span>Available Macros - Click to Insert</span>
+                                    </div>
+                                    <table class="macro-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Macro</th>
+                                                <th>Description</th>
+                                                <th>Use Case</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{AUCTION_ID}')">{AUCTION_ID}</code></td>
+                                                <td class="macro-description">Unique ID for this ad request</td>
+                                                <td class="macro-use-case">Track individual impressions</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{CREATIVE_ID}')">{CREATIVE_ID}</code></td>
+                                                <td class="macro-description">ID of the creative that won</td>
+                                                <td class="macro-use-case">A/B testing, creative performance</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{CAMPAIGN_ID}')">{CAMPAIGN_ID}</code></td>
+                                                <td class="macro-description">Campaign identifier</td>
+                                                <td class="macro-use-case">Campaign-level attribution</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{LINE_ITEM_ID}')">{LINE_ITEM_ID}</code></td>
+                                                <td class="macro-description">Line item identifier</td>
+                                                <td class="macro-use-case">Line item performance tracking</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{PUBLISHER_ID}')">{PUBLISHER_ID}</code></td>
+                                                <td class="macro-description">Publisher identifier</td>
+                                                <td class="macro-use-case">Publisher revenue share</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{PLACEMENT_ID}')">{PLACEMENT_ID}</code></td>
+                                                <td class="macro-description">Placement/ad slot identifier</td>
+                                                <td class="macro-use-case">Placement performance analysis</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{TIMESTAMP}')">{TIMESTAMP}</code></td>
+                                                <td class="macro-description">Unix timestamp (seconds)</td>
+                                                <td class="macro-use-case">Time-based analysis</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{TIMESTAMP_MS}')">{TIMESTAMP_MS}</code></td>
+                                                <td class="macro-description">Unix timestamp (milliseconds)</td>
+                                                <td class="macro-use-case">Precise timing</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{ISO_TIMESTAMP}')">{ISO_TIMESTAMP}</code></td>
+                                                <td class="macro-description">ISO 8601 formatted time</td>
+                                                <td class="macro-use-case">Human-readable timestamps</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{RANDOM}')">{RANDOM}</code></td>
+                                                <td class="macro-description">Random number (cache busting)</td>
+                                                <td class="macro-use-case">Prevent URL caching</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{UUID}')">{UUID}</code></td>
+                                                <td class="macro-description">Unique UUID v4 identifier</td>
+                                                <td class="macro-use-case">Global unique tracking</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code class="macro-code" onclick="insertMacro('{CUSTOM.key}')">{CUSTOM.key}</code></td>
+                                                <td class="macro-description">Custom parameter from ad request</td>
+                                                <td class="macro-use-case">Pass custom data (user_segment, etc.)</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit">Create Line Item</button>
                     </div>
                 </form>
             </div>
@@ -526,28 +1045,62 @@
     </div>
 
     <script>
-        function showTab(tabName) {
+        function showTab(tabName, event) {
+            // Prevent default link behavior if called from click
+            if (event) {
+                event.preventDefault();
+            }
+
             // Hide all tab contents
             const contents = document.querySelectorAll('.tab-content');
             contents.forEach(content => content.classList.remove('active'));
-            
+
             // Remove active class from all tabs
             const tabs = document.querySelectorAll('.tab');
             tabs.forEach(tab => tab.classList.remove('active'));
-            
+
             // Show selected tab content
-            document.getElementById(tabName).classList.add('active');
-            
-            // Add active class to clicked tab
-            event.target.classList.add('active');
-            
+            const tabContent = document.getElementById(tabName);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
+
+            // Add active class to corresponding tab link
+            const activeTabLink = document.querySelector(`.tab[href="#${tabName}"]`);
+            if (activeTabLink) {
+                activeTabLink.classList.add('active');
+            }
+
+            // Update URL hash without scrolling
+            if (window.location.hash !== '#' + tabName) {
+                history.pushState(null, null, '#' + tabName);
+            }
+
             // Load data for the selected tab (skip for forecasting)
             if (tabName !== 'forecasting') {
                 loadEntities(tabName);
             }
-            
+
             // Load dropdown data for forms
             loadDropdownData(tabName);
+
+            // Pre-fill publisher selections in forms
+            setTimeout(() => {
+                updateFormPublisherSelections();
+            }, 100);
+        }
+
+        // Handle browser back/forward and initial hash
+        function handleHashChange() {
+            let hash = window.location.hash.substring(1); // Remove the #
+
+            // Default to publishers if no hash or invalid hash
+            const validTabs = ['publishers', 'placements', 'campaigns', 'line_items', 'creatives', 'forecasting'];
+            if (!hash || !validTabs.includes(hash)) {
+                hash = 'publishers';
+            }
+
+            showTab(hash);
         }
 
         async function loadDropdownData(tabName) {
@@ -588,8 +1141,13 @@
         async function populateCampaignDropdown(tabName) {
             try {
                 const response = await fetch('/api/campaigns');
-                const campaigns = await response.json();
-                
+                let campaigns = await response.json();
+
+                // Filter campaigns by global publisher if selected
+                if (selectedGlobalPublisher) {
+                    campaigns = campaigns.filter(c => c.publisher_id === selectedGlobalPublisher);
+                }
+
                 const selects = document.querySelectorAll(`#${tabName} select[name="campaign_id"]`);
                 selects.forEach(select => {
                     select.innerHTML = '<option value="">Select Campaign</option>';
@@ -636,15 +1194,191 @@
             }
         }
 
+        // Toggle collapsible sections
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const toggle = document.getElementById(`${sectionId}-toggle`);
+
+            content.classList.toggle('collapsed');
+            toggle.classList.toggle('collapsed');
+        }
+
+        // Update budget type fields based on selection
+        function updateBudgetTypeFields() {
+            const budgetType = document.getElementById('budget_type').value;
+            const cpmField = document.getElementById('cpm_field');
+            const cpcField = document.getElementById('cpc_field');
+
+            // Hide both initially
+            cpmField.style.display = 'none';
+            cpcField.style.display = 'none';
+            cpmField.required = false;
+            cpcField.required = false;
+
+            // Show relevant field based on budget type
+            if (budgetType === 'cpm') {
+                cpmField.style.display = 'block';
+                cpmField.required = true;
+            } else if (budgetType === 'cpc') {
+                cpcField.style.display = 'block';
+                cpcField.required = true;
+            }
+        }
+
+        // Insert macro at cursor position in click URL field
+        function insertMacro(macro) {
+            const field = document.getElementById('click_url_field');
+            const cursorPos = field.selectionStart;
+            const textBefore = field.value.substring(0, cursorPos);
+            const textAfter = field.value.substring(field.selectionEnd);
+
+            // Insert macro at cursor position
+            field.value = textBefore + macro + textAfter;
+
+            // Move cursor to end of inserted macro
+            const newCursorPos = cursorPos + macro.length;
+            field.setSelectionRange(newCursorPos, newCursorPos);
+            field.focus();
+
+            // Visual feedback
+            field.style.borderColor = '#166534';
+            setTimeout(() => {
+                field.style.borderColor = '';
+            }, 300);
+        }
+
+        // Global Publisher Filter Functions
+        let selectedGlobalPublisher = null;
+        let allPublishers = [];
+
+        function loadGlobalPublisherFromStorage() {
+            const stored = localStorage.getItem('globalPublisherId');
+            if (stored && stored !== 'null') {
+                selectedGlobalPublisher = parseInt(stored);
+            }
+        }
+
+        function saveGlobalPublisherToStorage() {
+            if (selectedGlobalPublisher) {
+                localStorage.setItem('globalPublisherId', selectedGlobalPublisher);
+            } else {
+                localStorage.removeItem('globalPublisherId');
+            }
+        }
+
+        async function loadGlobalPublisherSelector() {
+            try {
+                const response = await fetch('/api/publishers');
+                allPublishers = await response.json();
+
+                const select = document.getElementById('global-publisher-select');
+                select.innerHTML = '<option value="">All Publishers</option>';
+
+                allPublishers.forEach(pub => {
+                    const option = document.createElement('option');
+                    option.value = pub.id;
+                    option.textContent = pub.name;
+                    select.appendChild(option);
+                });
+
+                // Restore from storage if available
+                if (selectedGlobalPublisher) {
+                    select.value = selectedGlobalPublisher;
+                    updateGlobalFilterUI();
+                }
+            } catch (err) {
+                console.error('Failed to load global publisher selector:', err);
+            }
+        }
+
+        function handleGlobalPublisherChange() {
+            const select = document.getElementById('global-publisher-select');
+            const publisherId = select.value;
+
+            if (publisherId) {
+                selectedGlobalPublisher = parseInt(publisherId);
+            } else {
+                selectedGlobalPublisher = null;
+            }
+
+            saveGlobalPublisherToStorage();
+            updateGlobalFilterUI();
+
+            // Reload current tab data
+            const activeTab = document.querySelector('.tab.active');
+            if (activeTab) {
+                const tabName = activeTab.textContent.toLowerCase().replace(' ', '_');
+                if (tabName !== 'forecasting') {
+                    loadEntities(tabName);
+                }
+            }
+
+            // Update form dropdowns
+            updateFormPublisherSelections();
+        }
+
+        function clearGlobalPublisher() {
+            selectedGlobalPublisher = null;
+            document.getElementById('global-publisher-select').value = '';
+            saveGlobalPublisherToStorage();
+            updateGlobalFilterUI();
+
+            // Reload current tab
+            const activeTab = document.querySelector('.tab.active');
+            if (activeTab) {
+                const tabName = activeTab.textContent.toLowerCase().replace(' ', '_');
+                if (tabName !== 'forecasting') {
+                    loadEntities(tabName);
+                }
+            }
+
+            // Clear form selections
+            updateFormPublisherSelections();
+        }
+
+        function updateGlobalFilterUI() {
+            const filterDiv = document.getElementById('global-filter');
+            const clearBtn = document.getElementById('global-filter-clear-btn');
+            const infoSpan = document.getElementById('global-filter-info');
+
+            if (selectedGlobalPublisher) {
+                filterDiv.classList.add('active');
+                clearBtn.disabled = false;
+
+                const publisher = allPublishers.find(p => p.id === selectedGlobalPublisher);
+                if (publisher) {
+                    infoSpan.textContent = `Filtering by ${publisher.name}`;
+                }
+            } else {
+                filterDiv.classList.remove('active');
+                clearBtn.disabled = true;
+                infoSpan.textContent = '';
+            }
+        }
+
+        function updateFormPublisherSelections() {
+            // Pre-fill publisher dropdowns in forms
+            const publisherSelects = document.querySelectorAll('select[name="publisher_id"]');
+            publisherSelects.forEach(select => {
+                if (selectedGlobalPublisher && select.querySelector(`option[value="${selectedGlobalPublisher}"]`)) {
+                    select.value = selectedGlobalPublisher;
+                }
+            });
+        }
+
+        function getSelectedGlobalPublisher() {
+            return selectedGlobalPublisher;
+        }
+
         function showMessage(message, type = 'success') {
             const messageDiv = document.createElement('div');
             messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
             messageDiv.textContent = message;
-            
+
             // Find the current active tab content
             const activeTab = document.querySelector('.tab-content.active .section');
             activeTab.insertBefore(messageDiv, activeTab.firstChild);
-            
+
             setTimeout(() => messageDiv.remove(), 5000);
         }
 
@@ -726,6 +1460,9 @@
             }
         }
 
+        // Store Grid.js instances globally so we can update them
+        const gridInstances = {};
+
         async function loadEntities(entityType) {
             const listDiv = document.getElementById(`${entityType}-list`);
             if (!listDiv) {
@@ -733,61 +1470,214 @@
                 return;
             }
             listDiv.innerHTML = '<div class="loading">Loading...</div>';
-            
+
             try {
                 const response = await fetch(`/api/${entityType}`);
-                const data = await response.json();
-                
+                let data = await response.json();
+
+                // Apply global publisher filter
+                if (selectedGlobalPublisher && data && data.length > 0) {
+                    if (entityType === 'publishers') {
+                        // Filter publishers table itself
+                        data = data.filter(item => item.id === selectedGlobalPublisher);
+                    } else if (entityType === 'placements' || entityType === 'campaigns' || entityType === 'line_items') {
+                        // Filter by publisher_id
+                        data = data.filter(item => item.publisher_id === selectedGlobalPublisher);
+                    } else if (entityType === 'creatives') {
+                        // For creatives, we need to check line items to get publisher
+                        // For now, let's just show all creatives (can be enhanced later)
+                    }
+                }
+
                 if (!data || data.length === 0) {
+                    const publisherInfo = selectedGlobalPublisher ?
+                        ` for ${allPublishers.find(p => p.id === selectedGlobalPublisher)?.name || 'selected publisher'}` : '';
                     listDiv.innerHTML = `
                         <div class="empty-state">
-                            <h3>No ${entityType} found</h3>
+                            <h3>No ${entityType} found${publisherInfo}</h3>
                             <p>Create your first ${entityType.slice(0, -1)} using the form above.</p>
                         </div>
                     `;
                     return;
                 }
 
-                let html = '<div class="table-container"><table><thead><tr>';
-                
-                // Create table headers from first object keys
+                // Clear the loading message
+                listDiv.innerHTML = '';
+
+                // Destroy existing grid if it exists
+                if (gridInstances[entityType]) {
+                    gridInstances[entityType].destroy();
+                }
+
+                // Get column names from first object
                 const keys = Object.keys(data[0]);
-                keys.forEach(key => {
-                    html += `<th>${key.replace(/_/g, ' ')}</th>`;
-                });
-                html += '<th class="actions">Actions</th></tr></thead><tbody>';
-                
-                // Create table rows
-                data.forEach(item => {
-                    html += '<tr>';
-                    keys.forEach(key => {
-                        let value = item[key];
-                        let className = '';
-                        
-                        if (key === 'active') {
-                            value = `<span class="status-badge ${value ? 'status-active' : 'status-inactive'}">${value ? 'Active' : 'Inactive'}</span>`;
-                        } else if (typeof value === 'object' && value !== null) {
-                            value = JSON.stringify(value);
-                            className = 'text-truncate';
-                        } else if (typeof value === 'boolean') {
-                            value = value ? 'Yes' : 'No';
-                        } else if (value === null || value === undefined) {
-                            value = '-';
-                        } else if (typeof value === 'string' && value.length > 50) {
-                            className = 'text-truncate';
+
+                // Helper function to format dates
+                const formatDate = (dateStr) => {
+                    try {
+                        const date = new Date(dateStr);
+                        if (isNaN(date.getTime())) return dateStr;
+
+                        // Check if it's a valid ISO date string
+                        if (!/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr;
+
+                        const now = new Date();
+                        const isToday = date.toDateString() === now.toDateString();
+                        const isThisYear = date.getFullYear() === now.getFullYear();
+
+                        // Format options
+                        const dateOptions = {
+                            month: 'short',
+                            day: 'numeric',
+                            year: isThisYear ? undefined : 'numeric'
+                        };
+
+                        const timeOptions = {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        };
+
+                        // Check if time is midnight (00:00:00)
+                        const isMidnight = date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0;
+
+                        if (isMidnight) {
+                            // Date only
+                            return date.toLocaleDateString('en-US', dateOptions);
+                        } else if (isToday) {
+                            // Today + time
+                            return 'Today, ' + date.toLocaleTimeString('en-US', timeOptions);
+                        } else {
+                            // Date + time
+                            return date.toLocaleDateString('en-US', dateOptions) + ', ' + date.toLocaleTimeString('en-US', timeOptions);
                         }
-                        
-                        html += `<td class="${className}" title="${typeof value === 'string' ? value.replace(/"/g, '&quot;') : ''}">${value}</td>`;
-                    });
-                    html += `<td class="actions">
-                        <button class="edit" onclick="editEntity('${entityType}', ${item.id || `'${item.id}'`})">Edit</button>
-                        <button class="delete" onclick="deleteEntity('${entityType}', ${item.id || `'${item.id}'`})">Delete</button>
-                    </td></tr>`;
+                    } catch (e) {
+                        return dateStr;
+                    }
+                };
+
+                // Helper function to format Go durations (nanoseconds to human-readable)
+                const formatDuration = (nanoseconds) => {
+                    if (typeof nanoseconds !== 'number' || nanoseconds < 1000000) {
+                        return nanoseconds; // Not a duration value
+                    }
+
+                    const seconds = nanoseconds / 1000000000;
+                    const minutes = seconds / 60;
+                    const hours = minutes / 60;
+                    const days = hours / 24;
+                    const weeks = days / 7;
+
+                    if (weeks >= 1 && weeks === Math.floor(weeks)) {
+                        return weeks === 1 ? '1 week' : `${weeks} weeks`;
+                    } else if (days >= 1 && days === Math.floor(days)) {
+                        return days === 1 ? '1 day' : `${days} days`;
+                    } else if (hours >= 1 && hours === Math.floor(hours)) {
+                        return hours === 1 ? '1 hour' : `${hours} hours`;
+                    } else if (minutes >= 1 && minutes === Math.floor(minutes)) {
+                        return minutes === 1 ? '1 minute' : `${minutes} minutes`;
+                    } else if (seconds >= 1) {
+                        return seconds === 1 ? '1 second' : `${seconds} seconds`;
+                    }
+
+                    return nanoseconds; // Return original if can't format nicely
+                };
+
+                // Check if a field is likely a duration field
+                const isDurationField = (key) => {
+                    return key.includes('window') || key.includes('duration') || key.includes('timeout') || key.includes('interval');
+                };
+
+                // Create columns configuration
+                const columns = keys.map(key => ({
+                    id: key,
+                    name: key.replace(/_/g, ' ').toUpperCase(),
+                    formatter: (cell, row) => {
+                        const value = row.cells[columns.findIndex(c => c.id === key)].data;
+
+                        if (key === 'active') {
+                            const badgeClass = value ? 'status-active' : 'status-inactive';
+                            const badgeText = value ? 'Active' : 'Inactive';
+                            return gridjs.html(`<span class="status-badge ${badgeClass}">${badgeText}</span>`);
+                        } else if (typeof value === 'object' && value !== null) {
+                            const jsonStr = JSON.stringify(value);
+                            const truncated = jsonStr.length > 50 ? jsonStr.substring(0, 50) + '...' : jsonStr;
+                            return gridjs.html(`<span title="${jsonStr.replace(/"/g, '&quot;')}">${truncated}</span>`);
+                        } else if (typeof value === 'boolean') {
+                            return value ? 'Yes' : 'No';
+                        } else if (value === null || value === undefined) {
+                            return '-';
+                        } else if (isDurationField(key) && typeof value === 'number' && value >= 1000000) {
+                            // Format duration fields (nanoseconds to human-readable)
+                            const formatted = formatDuration(value);
+                            return gridjs.html(`<span title="${value} nanoseconds">${formatted}</span>`);
+                        } else if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+                            // Looks like a date - format it
+                            const formatted = formatDate(value);
+                            return gridjs.html(`<span title="${value}">${formatted}</span>`);
+                        } else if (typeof value === 'string' && value.length > 50) {
+                            return gridjs.html(`<span title="${value.replace(/"/g, '&quot;')}">${value.substring(0, 50)}...</span>`);
+                        }
+                        return value;
+                    }
+                }));
+
+                // Add Actions column
+                columns.push({
+                    id: 'actions',
+                    name: 'Actions',
+                    sort: false,
+                    formatter: (cell, row) => {
+                        const id = row.cells[0].data; // Assumes first column is ID
+                        const idStr = typeof id === 'string' ? `'${id}'` : id;
+                        return gridjs.html(`
+                            <button class="delete" onclick="deleteEntity('${entityType}', ${idStr})">Delete</button>
+                        `);
+                    }
                 });
-                
-                html += '</tbody></table></div>';
-                listDiv.innerHTML = html;
-                
+
+                // Transform data to array format for Grid.js
+                const gridData = data.map(item => {
+                    const row = keys.map(key => item[key]);
+                    row.push(null); // Actions column (will be rendered by formatter)
+                    return row;
+                });
+
+                // Create Grid.js instance
+                const grid = new gridjs.Grid({
+                    columns: columns,
+                    data: gridData,
+                    search: {
+                        enabled: true,
+                        placeholder: 'Type a keyword...'
+                    },
+                    sort: true,
+                    pagination: {
+                        enabled: true,
+                        limit: 20,
+                        summary: true
+                    },
+                    fixedHeader: false,
+                    width: '100%',
+                    style: {
+                        table: {
+                            'white-space': 'nowrap'
+                        },
+                        container: {
+                            'overflow-x': 'auto'
+                        }
+                    },
+                    className: {
+                        table: 'gridjs-table'
+                    }
+                });
+
+                // Render the grid
+                grid.render(listDiv);
+
+                // Store instance for future updates
+                gridInstances[entityType] = grid;
+
             } catch (err) {
                 listDiv.innerHTML = `<div class="error-message">Error loading ${entityType}: ${err.message}</div>`;
             }
@@ -808,10 +1698,6 @@
             } catch (err) {
                 showMessage(`Error: ${err.message}`, 'error');
             }
-        }
-
-        function editEntity(entityType, id) {
-            showMessage('Edit functionality not implemented. Create a new item and delete the old one.', 'error');
         }
 
         function updateCreativeContentPlaceholder(selectElement) {
@@ -1393,9 +2279,17 @@
             detailsDiv.innerHTML = detailsHTML;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadEntities('publishers');
-            loadDropdownData('publishers');
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Lucide icons
+            lucide.createIcons();
+
+            // Load global publisher filter first
+            loadGlobalPublisherFromStorage();
+            await loadGlobalPublisherSelector();
+
+            // Handle initial hash and setup hash change listener
+            handleHashChange();
+            window.addEventListener('hashchange', handleHashChange);
 
             // Set default dates for line items
             const today = new Date();
