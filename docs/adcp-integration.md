@@ -50,6 +50,7 @@ OpenAdServe MCP Server
 - Automated campaign and line item setup
 - Input validation and error handling
 - Integration with existing publisher workflows
+- **Note**: Creative content must be added separately. The AdCP Creative Protocol (future implementation) will handle creative asset management. For now, use the admin UI to add creatives after campaign creation.
 
 ## Getting Started
 
@@ -141,15 +142,21 @@ The AI assistant calls `create_media_buy` with campaign details.
 - `budget` (required): Campaign budget (must be > 0)
 - `budget_type` (required): "cpm", "cpc", or "flat"
 - `placement_id` (required): Target placement ID
+- `cpm` (required for CPM campaigns): Cost per mille rate (e.g., 2.50 for $2.50 CPM)
+- `cpc` (required for CPC campaigns): Cost per click rate (e.g., 1.00 for $1.00 CPC)
 
 **Response:**
 ```json
 {
   "campaign_id": 123,
-  "status": "active",
-  "message": "Successfully created campaign 'Holiday Sale 2024'"
+  "status": "created",
+  "message": "Successfully created campaign 'Holiday Sale 2024' (ID: 123). Note: Creative content must be added separately via the Creative Protocol (future implementation) or admin UI before the campaign can serve ads."
 }
 ```
+
+**Important**: The Media Buy Protocol creates the campaign structure (campaign, line item, targeting, and budget). Creative content (HTML, images, videos) must be added separately:
+- **Future**: Use the AdCP Creative Protocol tasks like `build_creative` and `preview_creative`
+- **Current**: Use the OpenAdServe admin UI at `/admin` to create and associate creatives with the line item
 
 ## Configuration
 

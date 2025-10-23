@@ -3,7 +3,8 @@
 # Wrapper script for OpenAdServe MCP Server using official Go SDK
 # This runs the MCP server on-demand in the dedicated container
 
-cd "/Users/patrickwarner/projects-personal/openadserve"
+# Change to the directory containing this script (project root)
+cd "$(dirname "$0")"
 
 # Check if containers are running
 if ! docker compose ps mcp-server | grep -q "Up"; then

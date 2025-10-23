@@ -18,6 +18,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// Default impression forecasting fallback when ClickHouse forecasting is unavailable or fails.
+// Used by get_products to provide inventory estimates when historical data is not available.
+const defaultForecastImpressions int64 = 100000
+
 // AdCP Media Buy Protocol request/response types
 type GetProductsInput struct {
 	PublisherID  int       `json:"publisher_id"`
@@ -54,6 +58,8 @@ type CreateMediaBuyInput struct {
 	Budget      float64 `json:"budget"`
 	BudgetType  string  `json:"budget_type"`
 	PlacementID string  `json:"placement_id"`
+	CPM         float64 `json:"cpm,omitempty"` // Cost per mille for CPM campaigns
+	CPC         float64 `json:"cpc,omitempty"` // Cost per click for CPC campaigns
 }
 
 type CreateMediaBuyOutput struct {
@@ -68,6 +74,21 @@ type AdCPServer struct {
 	adDataStore models.AdDataStore
 	forecast    *forecasting.Engine
 	logger      *zap.Logger
+}
+
+// validateBudgetType validates that the budget type is one of the supported types.
+func validateBudgetType(budgetType string) error {
+	if budgetType == "" {
+		return nil // Budget type is optional
+	}
+	validTypes := []string{"cpm", "cpc", "flat"}
+	budgetTypeLower := strings.ToLower(budgetType)
+	for _, validType := range validTypes {
+		if budgetTypeLower == validType {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid budget_type: must be one of 'cpm', 'cpc', or 'flat'")
 }
 
 // GetProducts implements the AdCP get_products task
@@ -105,24 +126,13 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 
 	// Validate budget type if provided
-	if input.BudgetType != "" {
-		validTypes := []string{"cpm", "cpc", "flat"}
-		budgetType := strings.ToLower(input.BudgetType)
-		isValid := false
-		for _, validType := range validTypes {
-			if budgetType == validType {
-				isValid = true
-				break
-			}
-		}
-		if !isValid {
-			return &mcp.CallToolResult{
-				IsError: true,
-				Content: []mcp.Content{&mcp.TextContent{
-					Text: "Invalid budget_type: must be one of 'cpm', 'cpc', or 'flat'",
-				}},
-			}, GetProductsOutput{}, nil
-		}
+	if err := validateBudgetType(input.BudgetType); err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: err.Error(),
+			}},
+		}, GetProductsOutput{}, nil
 	}
 	// Get all placements and filter by publisher
 	allPlacements := s.adDataStore.GetAllPlacements()
@@ -146,7 +156,7 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 		}
 
 		// Try to use forecasting engine if available
-		availableImpressions := int64(100000) // Default fallback
+		availableImpressions := defaultForecastImpressions
 		if s.forecast != nil {
 			// Normalize budget type
 			budgetType := input.BudgetType
@@ -206,7 +216,7 @@ func (s *AdCPServer) GetProducts(ctx context.Context, req *mcp.CallToolRequest, 
 					zap.Float64("fill_rate", forecastResult.FillRate))
 			} else {
 				// Reset to default for this specific placement on forecast failure
-				availableImpressions = int64(100000)
+				availableImpressions = defaultForecastImpressions
 				s.logger.Warn("Forecast failed, using default",
 					zap.String("placement_id", placement.ID),
 					zap.Error(err),
@@ -285,20 +295,30 @@ func (s *AdCPServer) CreateMediaBuy(ctx context.Context, req *mcp.CallToolReques
 	}
 
 	// Validate budget type
-	validTypes := []string{"cpm", "cpc", "flat"}
-	budgetType := strings.ToLower(input.BudgetType)
-	isValid := false
-	for _, validType := range validTypes {
-		if budgetType == validType {
-			isValid = true
-			break
-		}
-	}
-	if !isValid {
+	if err := validateBudgetType(input.BudgetType); err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{&mcp.TextContent{
-				Text: "Invalid budget_type: must be one of 'cpm', 'cpc', or 'flat'",
+				Text: err.Error(),
+			}},
+		}, CreateMediaBuyOutput{}, nil
+	}
+	budgetType := strings.ToLower(input.BudgetType)
+
+	// Validate that CPM/CPC is provided based on budget type
+	if budgetType == "cpm" && input.CPM <= 0 {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid cpm: CPM rate must be provided and greater than 0 for CPM campaigns",
+			}},
+		}, CreateMediaBuyOutput{}, nil
+	}
+	if budgetType == "cpc" && input.CPC <= 0 {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{
+				Text: "Invalid cpc: CPC rate must be provided and greater than 0 for CPC campaigns",
 			}},
 		}, CreateMediaBuyOutput{}, nil
 	}
@@ -355,12 +375,13 @@ func (s *AdCPServer) CreateMediaBuy(ctx context.Context, req *mcp.CallToolReques
 	}
 
 	// Set CPM or CPC based on budget type
-	if strings.ToLower(input.BudgetType) == "cpm" {
-		lineItem.CPM = input.Budget / 1000 // Convert to CPM rate
-		lineItem.ECPM = lineItem.CPM
-	} else if strings.ToLower(input.BudgetType) == "cpc" {
-		lineItem.CPC = 1.0                         // Default $1 CPC
-		lineItem.ECPM = lineItem.CPC * 0.02 * 1000 // Assume 2% CTR
+	switch budgetType {
+	case "cpm":
+		lineItem.CPM = input.CPM
+		lineItem.ECPM = input.CPM // For CPM campaigns, ECPM equals CPM
+	case "cpc":
+		lineItem.CPC = input.CPC
+		lineItem.ECPM = 0 // For CPC campaigns, ECPM will be calculated by UpdateCTR() based on actual performance
 	}
 
 	if err := s.pg.InsertLineItem(lineItem); err != nil {
@@ -386,8 +407,8 @@ func (s *AdCPServer) CreateMediaBuy(ctx context.Context, req *mcp.CallToolReques
 
 	return nil, CreateMediaBuyOutput{
 		CampaignID: campaign.ID,
-		Status:     "active",
-		Message:    fmt.Sprintf("Successfully created campaign '%s'", input.Name),
+		Status:     "created",
+		Message:    fmt.Sprintf("Successfully created campaign '%s' (ID: %d). Note: Creative content must be added separately via the Creative Protocol (future implementation) or admin UI before the campaign can serve ads.", input.Name, campaign.ID),
 	}, nil
 }
 
@@ -596,6 +617,14 @@ func main() {
 				"placement_id": map[string]interface{}{
 					"type":        "string",
 					"description": "Placement ID to target",
+				},
+				"cpm": map[string]interface{}{
+					"type":        "number",
+					"description": "Cost per mille (CPM) rate - required for CPM campaigns",
+				},
+				"cpc": map[string]interface{}{
+					"type":        "number",
+					"description": "Cost per click (CPC) rate - required for CPC campaigns",
 				},
 			},
 			"required": []string{"name", "publisher_id", "budget", "budget_type", "placement_id"},
