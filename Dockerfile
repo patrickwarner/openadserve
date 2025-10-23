@@ -15,6 +15,7 @@ COPY . .
 
 # Build binaries
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o openadserve ./cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o mcp-server ./cmd/mcp-server/main.go
 
 EXPOSE 8787
 

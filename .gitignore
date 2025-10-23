@@ -10,6 +10,7 @@
 *.so
 *.dylib
 /server
+/mcp-server
 
 # Test binaries
 *.test
