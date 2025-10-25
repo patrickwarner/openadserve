@@ -334,6 +334,12 @@
         const bid = seatbid[0].bid[0]; // Assuming one bid.
         const { adm, impurl, clkurl, evturl, repturl } = bid;
 
+        // Store report URL on the container for convenience
+        if (repturl) {
+          container.dataset.reportUrl = repturl;
+        }
+
+        // Render ad HTML (includes both HTML ads and server-composed banner ads)
         // Generate a unique ID for this ad instance to correlate postMessage events.
         const adInstanceId =
           "adInst_" + Math.random().toString(36).slice(2, 10);
@@ -365,11 +371,6 @@
           }
         }
         window.addEventListener("message", handleAdMessage);
-
-        // store report URL on the container for convenience
-        if (repturl) {
-          container.dataset.reportUrl = repturl;
-        }
 
         // Create wrapper div to hold iframe and report link
         const wrapper = document.createElement("div");

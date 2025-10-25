@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS creatives (
     publisher_id INT REFERENCES publishers(id),
     html TEXT,
     native JSONB,
+    banner JSONB,
     width INT,
     height INT,
     format TEXT,
@@ -331,7 +332,7 @@ func (p *Postgres) LoadPlacements() ([]models.Placement, error) {
 
 // LoadCreatives fetches creatives from the database.
 func (p *Postgres) LoadCreatives() ([]models.Creative, error) {
-	rows, err := p.DB.QueryContext(context.Background(), `SELECT id, placement_id, line_item_id, campaign_id, publisher_id, html, native, width, height, format, click_url FROM creatives`)
+	rows, err := p.DB.QueryContext(context.Background(), `SELECT id, placement_id, line_item_id, campaign_id, publisher_id, html, native, banner, width, height, format, click_url FROM creatives`)
 	if err != nil {
 		return nil, fmt.Errorf("query creatives: %w", err)
 	}
@@ -341,12 +342,15 @@ func (p *Postgres) LoadCreatives() ([]models.Creative, error) {
 	var cs []models.Creative
 	for rows.Next() {
 		var c models.Creative
-		var native, clickURL sql.NullString
-		if err := rows.Scan(&c.ID, &c.PlacementID, &c.LineItemID, &c.CampaignID, &c.PublisherID, &c.HTML, &native, &c.Width, &c.Height, &c.Format, &clickURL); err != nil {
+		var native, banner, clickURL sql.NullString
+		if err := rows.Scan(&c.ID, &c.PlacementID, &c.LineItemID, &c.CampaignID, &c.PublisherID, &c.HTML, &native, &banner, &c.Width, &c.Height, &c.Format, &clickURL); err != nil {
 			return nil, fmt.Errorf("scan creative: %w", err)
 		}
 		if native.Valid {
 			c.Native = json.RawMessage(native.String)
+		}
+		if banner.Valid {
+			c.Banner = json.RawMessage(banner.String)
 		}
 		if clickURL.Valid {
 			c.ClickURL = clickURL.String
@@ -566,7 +570,14 @@ func (p *Postgres) InsertCreative(c *models.Creative) error {
 		nativeParam = c.Native
 	}
 
-	err := p.DB.QueryRowContext(context.Background(), `INSERT INTO creatives (placement_id, line_item_id, campaign_id, publisher_id, html, native, width, height, format, click_url) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`, c.PlacementID, c.LineItemID, c.CampaignID, c.PublisherID, c.HTML, nativeParam, c.Width, c.Height, c.Format, c.ClickURL).Scan(&c.ID)
+	var bannerParam interface{}
+	if len(c.Banner) == 0 || string(c.Banner) == "" {
+		bannerParam = nil
+	} else {
+		bannerParam = c.Banner
+	}
+
+	err := p.DB.QueryRowContext(context.Background(), `INSERT INTO creatives (placement_id, line_item_id, campaign_id, publisher_id, html, native, banner, width, height, format, click_url) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`, c.PlacementID, c.LineItemID, c.CampaignID, c.PublisherID, c.HTML, nativeParam, bannerParam, c.Width, c.Height, c.Format, c.ClickURL).Scan(&c.ID)
 	if err != nil {
 		return fmt.Errorf("insert creative: %w", err)
 	}
@@ -582,7 +593,14 @@ func (p *Postgres) UpdateCreative(c models.Creative) error {
 		nativeParam = c.Native
 	}
 
-	_, err := p.DB.ExecContext(context.Background(), `UPDATE creatives SET placement_id=$1, line_item_id=$2, campaign_id=$3, publisher_id=$4, html=$5, native=$6, width=$7, height=$8, format=$9, click_url=$10 WHERE id=$11`, c.PlacementID, c.LineItemID, c.CampaignID, c.PublisherID, c.HTML, nativeParam, c.Width, c.Height, c.Format, c.ClickURL, c.ID)
+	var bannerParam interface{}
+	if len(c.Banner) == 0 || string(c.Banner) == "" {
+		bannerParam = nil
+	} else {
+		bannerParam = c.Banner
+	}
+
+	_, err := p.DB.ExecContext(context.Background(), `UPDATE creatives SET placement_id=$1, line_item_id=$2, campaign_id=$3, publisher_id=$4, html=$5, native=$6, banner=$7, width=$8, height=$9, format=$10, click_url=$11 WHERE id=$12`, c.PlacementID, c.LineItemID, c.CampaignID, c.PublisherID, c.HTML, nativeParam, bannerParam, c.Width, c.Height, c.Format, c.ClickURL, c.ID)
 	if err != nil {
 		return fmt.Errorf("update creative: %w", err)
 	}

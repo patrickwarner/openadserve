@@ -221,6 +221,8 @@ func (s *Server) GetAdHandler(w http.ResponseWriter, r *http.Request) {
 	adm := ad.HTML
 	if len(ad.Native) > 0 {
 		adm = string(ad.Native)
+	} else if len(ad.Banner) > 0 {
+		adm = string(ad.Banner)
 	}
 	tok, err := token.GenerateWithAuctionData(req.ID, req.Imp[0].ID, fmt.Sprintf("%d", ad.CreativeID), fmt.Sprintf("%d", ad.CampaignID), fmt.Sprintf("%d", ad.LineItemID), userID, fmt.Sprintf("%d", req.Ext.PublisherID), placementID, ad.Price, "USD", req.Ext.CustomParams, s.TokenSecret)
 	if err != nil {

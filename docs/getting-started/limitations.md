@@ -63,9 +63,7 @@ This document outlines the current limitations of this ad server implementation.
 - **Missing brand safety**: No content categorization or blocking capabilities
 
 ### Ad Format Limitations
-- **Basic format support**: Only HTML and native formats (no video, audio, interactive)
-- **No VAST/VPAID**: Video advertising not supported
-- **No rich media**: No expandable, interstitial, or interactive ad units
+- **Basic format support**: Supports HTML, banner (responsive images), and native formats (no video, audio, interactive)
 - **Simple native ads**: Basic JSON structure without standardized templates
 - **No creative validation**: No automated scanning for malicious or policy-violating content
 

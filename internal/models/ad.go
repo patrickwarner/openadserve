@@ -19,11 +19,16 @@ type Creative struct {
 	// Native holds the raw JSON data for native ad assets if the creative format is "native".
 	// This allows publishers to define flexible, custom structures for their native ads,
 	// which they can then render with their own client-side templating.
-	Native json.RawMessage `json:"native,omitempty"`
+	Native json.RawMessage `json:"native"`
+	// Banner holds the raw JSON data for banner ad assets if the creative format is "banner".
+	// Contains image URLs, dimensions, and alt text. Supports responsive images via an images array
+	// for retina/high-DPI displays. Publishers render these as standard <img> tags.
+	// Example: {"image": "url", "alt": "text", "images": [{"url": "...", "width": 728, "height": 90}]}
+	Banner json.RawMessage `json:"banner"`
 	Width  int             `json:"width"`  // Width of the creative in pixels.
 	Height int             `json:"height"` // Height of the creative in pixels.
-	// Format specifies the type of the creative, e.g., "html" or "native".
-	// This dictates how the ad content (HTML or Native) is interpreted and rendered.
+	// Format specifies the type of the creative, e.g., "html", "native", or "banner".
+	// This dictates how the ad content (HTML, Native, or Banner) is interpreted and rendered.
 	Format string `json:"format"`
 	// ClickURL is the destination URL where users should be redirected when they click on the ad.
 	// Supports macro expansion for dynamic values like {AUCTION_ID}, {CREATIVE_ID}, etc.
@@ -42,7 +47,10 @@ type AdResponse struct {
 	HTML string `json:"html"`
 	// Native holds the raw JSON data for native ad assets if the creative format is "native".
 	// This allows publishers to receive structured data and render it using their own native templating.
-	Native     json.RawMessage `json:"native,omitempty"`
+	Native json.RawMessage `json:"native,omitempty"`
+	// Banner holds the raw JSON data for banner ad assets if the creative format is "banner".
+	// This allows publishers to receive image URLs and metadata for rendering standard image-based ads.
+	Banner     json.RawMessage `json:"banner,omitempty"`
 	CampaignID int             `json:"campaign_id"`  // The ID of the campaign this ad belongs to (Campaign.ID).
 	LineItemID int             `json:"line_item_id"` // The ID of the line item this ad belongs to (LineItem.ID).
 	Price      float64         `json:"price"`        // The eCPM price of the ad.
