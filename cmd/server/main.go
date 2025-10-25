@@ -186,6 +186,7 @@ func run(logger *zap.Logger, cfg config.Config) error {
 	crud.HandleFunc("/campaigns", srvDeps.CreateCampaign).Methods("POST")
 	crud.HandleFunc("/campaigns/{id}", srvDeps.UpdateCampaign).Methods("PUT")
 	crud.HandleFunc("/campaigns/{id}", srvDeps.DeleteCampaign).Methods("DELETE")
+	crud.HandleFunc("/campaigns/{id}/report", srvDeps.CampaignReportHandler).Methods("GET")
 
 	crud.HandleFunc("/placements", srvDeps.ListPlacements).Methods("GET")
 	crud.HandleFunc("/placements", srvDeps.CreatePlacement).Methods("POST")
