@@ -120,8 +120,8 @@ func getDailyMetrics(ctx context.Context, db *sql.DB, campaignID int, days int) 
 			countIf(event_type = 'impression') as impressions,
 			countIf(event_type = 'click') as clicks,
 			sum(cost) as spend,
-			round(clicks / impressions * 100, 2) as ctr,
-			round(spend / impressions * 1000, 2) as cpm,
+			round(if(impressions > 0, clicks / impressions * 100, 0), 2) as ctr,
+			round(if(impressions > 0, spend / impressions * 1000, 0), 2) as cpm,
 			round(if(clicks > 0, spend / clicks, 0), 2) as cpc
 		FROM events
 		WHERE campaign_id = ?
@@ -160,7 +160,7 @@ func getTopCreatives(ctx context.Context, db *sql.DB, campaignID int, days int, 
 			assumeNotNull(creative_id) as creative_id,
 			countIf(event_type = 'impression') as impressions,
 			countIf(event_type = 'click') as clicks,
-			round(clicks / impressions * 100, 2) as ctr,
+			round(if(impressions > 0, clicks / impressions * 100, 0), 2) as ctr,
 			sum(cost) as spend
 		FROM events
 		WHERE campaign_id = ?
@@ -199,8 +199,8 @@ func getLineItemMetrics(ctx context.Context, db *sql.DB, campaignID int, days in
 			countIf(event_type = 'impression') as impressions,
 			countIf(event_type = 'click') as clicks,
 			sum(cost) as spend,
-			round(clicks / impressions * 100, 2) as ctr,
-			round(spend / impressions * 1000, 2) as cpm,
+			round(if(impressions > 0, clicks / impressions * 100, 0), 2) as ctr,
+			round(if(impressions > 0, spend / impressions * 1000, 0), 2) as cpm,
 			round(if(clicks > 0, spend / clicks, 0), 2) as cpc
 		FROM events
 		WHERE campaign_id = ?
