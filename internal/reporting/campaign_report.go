@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+// Constants for campaign report configuration
+const (
+	MaxReportDays     = 365 // Maximum number of days allowed in a report
+	DefaultReportDays = 7   // Default number of days for a report
+	MaxTopCreatives   = 5   // Maximum number of top creatives to return
+)
+
 // CampaignMetrics represents performance metrics for a campaign over a specific time period.
 // All financial metrics are in USD. CTR is expressed as a percentage (0-100).
 type CampaignMetrics struct {
@@ -94,7 +101,7 @@ func GenerateCampaignReport(ctx context.Context, db *sql.DB, campaignID int, day
 	summary.TotalMetrics = totalMetrics
 
 	// Get top performing creatives ranked by CTR
-	topCreatives, err := getTopCreatives(ctx, db, campaignID, days, 5)
+	topCreatives, err := getTopCreatives(ctx, db, campaignID, days, MaxTopCreatives)
 	if err != nil {
 		return nil, fmt.Errorf("get top creatives: %w", err)
 	}

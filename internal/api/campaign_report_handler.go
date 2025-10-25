@@ -59,7 +59,7 @@ func (s *Server) CampaignReportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse optional days query parameter (default: 7, max: 365)
-	days := 7
+	days := reporting.DefaultReportDays
 	if daysParam := r.URL.Query().Get("days"); daysParam != "" {
 		parsedDays, err := strconv.Atoi(daysParam)
 		if err != nil || parsedDays <= 0 {
@@ -68,8 +68,8 @@ func (s *Server) CampaignReportHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid days parameter", http.StatusBadRequest)
 			return
 		}
-		if parsedDays > 365 {
-			parsedDays = 365 // Cap at 365 days
+		if parsedDays > reporting.MaxReportDays {
+			parsedDays = reporting.MaxReportDays // Cap at max allowed days
 		}
 		days = parsedDays
 	}
@@ -94,6 +94,16 @@ func (s *Server) CampaignReportHandler(w http.ResponseWriter, r *http.Request) {
 		s.Metrics.RecordRequestLatency(endpoint, method, time.Since(start))
 		http.Error(w, "failed to generate report", http.StatusInternalServerError)
 		return
+	}
+
+	// Enrich line item metrics with budget types from PostgreSQL
+	if s.PG != nil && len(summary.LineItemMetrics) > 0 {
+		for i := range summary.LineItemMetrics {
+			lineItem := s.AdDataStore.GetLineItemByID(summary.LineItemMetrics[i].LineItemID)
+			if lineItem != nil {
+				summary.LineItemMetrics[i].BudgetType = lineItem.BudgetType
+			}
+		}
 	}
 
 	// Return JSON response
