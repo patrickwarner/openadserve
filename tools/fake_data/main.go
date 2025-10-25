@@ -69,33 +69,58 @@ func main() {
 			}
 		}
 
-		for c := 0; c < *campPerPub; c++ {
-			camp := models.Campaign{PublisherID: demo.ID, Name: fakeCampaignName(r)}
-			if err := insertCampaign(pg, &camp); err != nil {
+		// Create matched HTML and banner campaigns to ensure 50/50 distribution
+		// We'll create pairs of campaigns with identical eCPM values but different formats
+		displayPlacements := []models.Placement{}
+		for _, p := range pls {
+			for _, fmt := range p.Formats {
+				if fmt == "html" || fmt == "banner" {
+					displayPlacements = append(displayPlacements, p)
+					break
+				}
+			}
+		}
+
+		numPairs := *campPerPub / 2 // Create pairs of HTML/banner campaigns
+		for c := 0; c < numPairs; c++ {
+			baseECPM := float64(r.Intn(400)+100) / 100 // eCPM between 1.00 and 5.00
+
+			// Create HTML campaign
+			htmlCamp := models.Campaign{PublisherID: demo.ID, Name: fmt.Sprintf("%s HTML", fakeCampaignName(r))}
+			if err := insertCampaign(pg, &htmlCamp); err != nil {
 				logger.Fatal("insert campaign", zap.Error(err))
 			}
 
-			for l := 0; l < *liPerCamp; l++ {
-				li := demoLineItem(r, camp.ID, demo.ID)
-				if err := insertLineItem(pg, &li); err != nil {
+			// Create Banner campaign with matching eCPM
+			bannerCamp := models.Campaign{PublisherID: demo.ID, Name: fmt.Sprintf("%s Banner", fakeCampaignName(r))}
+			if err := insertCampaign(pg, &bannerCamp); err != nil {
+				logger.Fatal("insert campaign", zap.Error(err))
+			}
+
+			// For each placement, create line items for both HTML and banner with same eCPM
+			for _, pl := range displayPlacements {
+				// HTML line item
+				htmlLI := demoLineItemWithECPM(r, htmlCamp.ID, demo.ID, baseECPM)
+				if err := insertLineItem(pg, &htmlLI); err != nil {
 					logger.Fatal("insert line item", zap.Error(err))
 				}
 
-				for x := 0; x < *creativesPer; x++ {
-					// Only use display placements for random campaigns, not native ones
-					displayPls := []models.Placement{}
-					for _, p := range pls {
-						if len(p.Formats) > 0 && p.Formats[0] == "html" { // Only include display ads
-							displayPls = append(displayPls, p)
-						}
-					}
-					if len(displayPls) > 0 {
-						pl := displayPls[r.Intn(len(displayPls))]
-						cr := randomCreative(r, li.ID, camp.ID, demo.ID, pl)
-						if err := insertCreative(pg, &cr); err != nil {
-							logger.Fatal("insert creative", zap.Error(err))
-						}
-					}
+				// Create HTML creative
+				htmlCr := randomCreative(r, htmlLI.ID, htmlCamp.ID, demo.ID, pl)
+				if err := insertCreative(pg, &htmlCr); err != nil {
+					logger.Fatal("insert creative", zap.Error(err))
+				}
+
+				// Banner line item with matching eCPM
+				bannerLI := demoLineItemWithECPM(r, bannerCamp.ID, demo.ID, baseECPM)
+				if err := insertLineItem(pg, &bannerLI); err != nil {
+					logger.Fatal("insert line item", zap.Error(err))
+				}
+
+				// Create banner creative
+				bannerCr := randomBannerCreative(r, bannerLI.ID, bannerCamp.ID, demo.ID, pl)
+				if err := insertCreative(pg, &bannerCr); err != nil {
+					logger.Fatal("insert creative", zap.Error(err))
 				}
 			}
 		}
@@ -201,10 +226,16 @@ func insertCreative(pg *db.Postgres, c *models.Creative) error {
 	} else {
 		native = nil
 	}
+	var banner interface{}
+	if len(c.Banner) > 0 {
+		banner = string(c.Banner)
+	} else {
+		banner = nil
+	}
 	err := pg.DB.QueryRowContext(context.Background(), `INSERT INTO creatives (
-        placement_id, line_item_id, campaign_id, publisher_id, html, native, width, height, format, click_url)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-		c.PlacementID, c.LineItemID, c.CampaignID, c.PublisherID, c.HTML, native, c.Width, c.Height, c.Format, nullString(c.ClickURL)).Scan(&c.ID)
+        placement_id, line_item_id, campaign_id, publisher_id, html, native, banner, width, height, format, click_url)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+		c.PlacementID, c.LineItemID, c.CampaignID, c.PublisherID, c.HTML, native, banner, c.Width, c.Height, c.Format, nullString(c.ClickURL)).Scan(&c.ID)
 	return err
 }
 
@@ -404,9 +435,9 @@ func randomPlacement(r *rand.Rand, pubID, idx int) models.Placement {
 
 func demoPlacements(pubID int) []models.Placement {
 	return []models.Placement{
-		{ID: "header", PublisherID: pubID, Width: 728, Height: 90, Formats: []string{"html"}},
-		{ID: "sidebar", PublisherID: pubID, Width: 160, Height: 600, Formats: []string{"html"}},
-		{ID: "content_rect", PublisherID: pubID, Width: 300, Height: 250, Formats: []string{"html"}},
+		{ID: "header", PublisherID: pubID, Width: 728, Height: 90, Formats: []string{"html", "banner"}},
+		{ID: "sidebar", PublisherID: pubID, Width: 160, Height: 600, Formats: []string{"html", "banner"}},
+		{ID: "content_rect", PublisherID: pubID, Width: 300, Height: 250, Formats: []string{"html", "banner"}},
 		{ID: "native_feed_simple", PublisherID: pubID, Width: 0, Height: 0, Formats: []string{"native"}},
 		{ID: "social_native_post", PublisherID: pubID, Width: 0, Height: 0, Formats: []string{"native"}},
 		{ID: "social_skin_takeover", PublisherID: pubID, Width: 0, Height: 0, Formats: []string{"native"}},
@@ -422,7 +453,7 @@ var priorities = []string{models.PriorityHigh, models.PriorityMedium, models.Pri
 var budgetTypes = []string{models.BudgetTypeCPM, models.BudgetTypeCPC}
 var lineItemTypes = []string{models.LineItemTypeDirect, models.LineItemTypeProgrammatic}
 
-func demoLineItem(r *rand.Rand, campID, pubID int) models.LineItem {
+func demoLineItemWithECPM(r *rand.Rand, campID, pubID int, ecpm float64) models.LineItem {
 	// ensure line items are immediately active by starting in the past
 	start := time.Now().Add(-time.Duration(r.Intn(72)) * time.Hour)
 	end := start.Add(time.Duration(r.Intn(21)+7) * 24 * time.Hour)
@@ -432,29 +463,19 @@ func demoLineItem(r *rand.Rand, campID, pubID int) models.LineItem {
 		Name:               fakeLineItemName(r),
 		StartDate:          start,
 		EndDate:            end,
-		DailyImpressionCap: r.Intn(5000),
-		PaceType:           paceTypes[r.Intn(len(paceTypes))],
-		Priority:           priorities[r.Intn(len(priorities))],
-		FrequencyCap:       3,
-		FrequencyWindow:    60 * time.Second,
+		DailyImpressionCap: 0,
+		DailyClickCap:      0,
+		PaceType:           models.PacingEven,
+		Priority:           models.PriorityMedium,
+		FrequencyCap:       0,
+		FrequencyWindow:    0,
 		Active:             true,
-		BudgetType:         budgetTypes[r.Intn(len(budgetTypes))],
-		BudgetAmount:       float64(r.Intn(8000) + 2000),
-		Type:               lineItemTypes[r.Intn(len(lineItemTypes))],
+		BudgetType:         models.BudgetTypeCPM,
+		BudgetAmount:       10000.0,
+		CPM:                ecpm,
+		ECPM:               ecpm,
+		Type:               models.LineItemTypeDirect,
 		ClickURL:           generateRealisticClickURL(r),
-		// No targeting constraints for demo publisher to ensure ads serve
-	}
-	switch li.BudgetType {
-	case models.BudgetTypeCPM:
-		li.CPM = float64(r.Intn(500)+50) / 100
-		li.ECPM = li.CPM
-	case models.BudgetTypeCPC:
-		li.CPC = float64(r.Intn(200)+25) / 100
-		ctr := 0.02 + r.Float64()*0.05
-		li.ECPM = li.CPC * ctr * 1000
-	}
-	if li.Type == models.LineItemTypeProgrammatic {
-		li.Endpoint = fmt.Sprintf("https://buyer%d.example.com/bid", r.Intn(10))
 	}
 	return li
 }
@@ -541,6 +562,46 @@ func randomCreative(r *rand.Rand, liID, campID, pubID int, p models.Placement) m
 		Width:       p.Width,
 		Height:      p.Height,
 		Format:      p.Formats[0],
+		ClickURL:    clickURL,
+	}
+}
+
+func randomBannerCreative(r *rand.Rand, liID, campID, pubID int, p models.Placement) models.Creative {
+	clickURL := generateRealisticClickURL(r)
+
+	// Unsplash image collection for banner ads
+	imageIDs := []string{
+		"photo-1505740420928-5e560c06d30e", // headphones
+		"photo-1496181133206-80ce9b88a853", // laptop
+		"photo-1523275335684-37898b6baf30", // watch
+		"photo-1526738549149-8e07eca6c147", // shoes
+		"photo-1542291026-7eec264c27ff",    // sneakers
+		"photo-1572635196237-14b3f281503f", // shopping
+		"photo-1525904097878-94fb15835963", // camera
+		"photo-1517336714731-489689fd1ca8", // tech
+	}
+	imageID := imageIDs[r.Intn(len(imageIDs))]
+
+	// Create banner data with responsive images
+	bannerData := map[string]interface{}{
+		"image": fmt.Sprintf("https://images.unsplash.com/%s?w=%d&h=%d&fit=crop&crop=center", imageID, p.Width, p.Height),
+		"alt":   "Advertisement - Special Offer",
+		"images": []map[string]interface{}{
+			{"url": fmt.Sprintf("https://images.unsplash.com/%s?w=%d&h=%d&fit=crop&crop=center", imageID, p.Width, p.Height), "width": p.Width, "height": p.Height},
+			{"url": fmt.Sprintf("https://images.unsplash.com/%s?w=%d&h=%d&fit=crop&crop=center", imageID, p.Width*2, p.Height*2), "width": p.Width * 2, "height": p.Height * 2},
+		},
+	}
+	bannerJSON, _ := json.Marshal(bannerData)
+
+	return models.Creative{
+		PlacementID: p.ID,
+		LineItemID:  liID,
+		CampaignID:  campID,
+		PublisherID: pubID,
+		Banner:      bannerJSON,
+		Width:       p.Width,
+		Height:      p.Height,
+		Format:      "banner",
 		ClickURL:    clickURL,
 	}
 }

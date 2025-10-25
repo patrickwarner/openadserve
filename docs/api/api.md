@@ -55,7 +55,7 @@ This fallback mechanism ensures geo-targeting can still function, though direct 
 | `seatbid[].bid[].impid` | string | Impression ID from request |
 | `seatbid[].bid[].crid` | string | Creative ID |
 | `seatbid[].bid[].cid` | string | Campaign ID |
-| `seatbid[].bid[].adm` | string | Ad markup (HTML or JSON for native) |
+| `seatbid[].bid[].adm` | string | Ad markup (HTML for standard/banner ads, JSON for native) |
 | `seatbid[].bid[].price` | float | Line item eCPM value |
 | `seatbid[].bid[].impurl` | string | Impression tracking URL with token |
 | `seatbid[].bid[].clkurl` | string | Click tracking URL with token |
@@ -90,7 +90,10 @@ This fallback mechanism ensures geo-targeting can still function, though direct 
 **Notes:**
 - Empty `seatbid` array indicates no matching ads
 - Tracking URLs contain pre-signed tokens (expire after 30 minutes)
-- Native format ads have JSON assets in `adm` field
+- Creative formats:
+  - **HTML**: Custom ad markup provided by advertiser (returned in `adm` field)
+  - **Banner**: Image-based ads with JSON asset definition, server-side composed into HTML with responsive srcset support (returned as HTML in `adm` field)
+  - **Native**: Flexible JSON assets for publisher-controlled rendering (returned as JSON in `adm` field)
 
 ## `GET /impression`
 

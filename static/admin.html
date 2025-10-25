@@ -941,6 +941,7 @@
                             <option value="">Select Format</option>
                             <option value="html">HTML</option>
                             <option value="native">Native</option>
+                            <option value="banner">Banner</option>
                         </select>
                         <textarea name="content" id="creative-content" placeholder="Select format to see example" rows="6" class="form-full"></textarea>
                         <input type="url" name="click_url" placeholder="Click URL (overrides line item default, supports macros)" class="form-full">
@@ -1422,6 +1423,13 @@
                         } catch (e) {
                             throw new Error(`Invalid JSON in content field: ${e.message}`);
                         }
+                    } else if (format === 'banner') {
+                        // Parse JSON for banner creatives
+                        try {
+                            data.banner = JSON.parse(value);
+                        } catch (e) {
+                            throw new Error(`Invalid JSON in content field: ${e.message}`);
+                        }
                     } else {
                         throw new Error('Format must be selected before content');
                     }
@@ -1509,6 +1517,16 @@
                     gridInstances[entityType].destroy();
                 }
 
+                // Store original data for preview access, then transform for display
+                let originalData = data;
+                if (entityType === 'creatives') {
+                    // Remove banner and native from display data but keep in window for preview access
+                    data = data.map(item => {
+                        const { banner, native, ...rest } = item;
+                        return rest;
+                    });
+                }
+
                 // Get column names from first object
                 const keys = Object.keys(data[0]);
 
@@ -1591,9 +1609,51 @@
                 // Create columns configuration
                 const columns = keys.map(key => ({
                     id: key,
-                    name: key.replace(/_/g, ' ').toUpperCase(),
+                    name: key === 'html' && entityType === 'creatives' ? 'PREVIEW' : key.replace(/_/g, ' ').toUpperCase(),
                     formatter: (cell, row) => {
                         const value = row.cells[columns.findIndex(c => c.id === key)].data;
+
+                        // Special preview handling for creatives HTML column
+                        if (key === 'html' && entityType === 'creatives') {
+                            const formatIdx = keys.indexOf('format');
+                            const idIdx = keys.indexOf('id');
+
+                            const format = formatIdx >= 0 ? row.cells[formatIdx].data : null;
+                            const creativeId = idIdx >= 0 ? row.cells[idIdx].data : 'unknown';
+
+                            // Get banner and native from original data
+                            const originalItem = originalData.find(item => item.id === creativeId);
+                            const banner = originalItem?.banner || null;
+                            const native = originalItem?.native || null;
+
+                            // Store creative data globally for preview modal access
+                            if (!window.creativePreviewData) window.creativePreviewData = {};
+                            window.creativePreviewData[creativeId] = { format, html: value, banner, native };
+
+                            if (format === 'html' && value) {
+                                return gridjs.html(`<button onclick="showCreativePreview(${creativeId})" style="padding:4px 8px; cursor:pointer;">View Preview</button>`);
+                            } else if (format === 'banner' && banner) {
+                                try {
+                                    const bannerData = typeof banner === 'string' ? JSON.parse(banner) : banner;
+                                    const imgSrc = bannerData.image || (bannerData.images && bannerData.images[0] ? bannerData.images[0].url : '');
+                                    if (imgSrc) {
+                                        return gridjs.html(`<img src="${imgSrc}" alt="Banner preview" onclick="showCreativePreview(${creativeId})" style="max-width:100px; max-height:50px; display:block; cursor:pointer;" title="Click to view full size">`);
+                                    }
+                                } catch (e) {
+                                    return 'Invalid banner JSON';
+                                }
+                                return 'No image';
+                            } else if (format === 'native' && native) {
+                                try {
+                                    const nativeData = typeof native === 'string' ? JSON.parse(native) : native;
+                                    const title = nativeData.title || nativeData.brand || 'Native Ad';
+                                    return gridjs.html(`<button onclick="showCreativePreview(${creativeId})" style="padding:4px 8px; cursor:pointer;" title="${title}">View Preview</button>`);
+                                } catch (e) {
+                                    return 'Invalid native JSON';
+                                }
+                            }
+                            return '-';
+                        }
 
                         if (key === 'active') {
                             const badgeClass = value ? 'status-active' : 'status-inactive';
@@ -1700,10 +1760,104 @@
             }
         }
 
+        function showCreativePreview(creativeId) {
+            const data = window.creativePreviewData?.[creativeId];
+            if (!data) {
+                alert('Preview data not available');
+                return;
+            }
+
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px;';
+
+            // Create modal content container
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = 'background:white; padding:20px; border-radius:8px; max-width:900px; width:100%; max-height:90vh; overflow:auto; position:relative;';
+
+            // Add title
+            const title = document.createElement('h3');
+            title.textContent = `${data.format.toUpperCase()} Creative Preview`;
+            title.style.cssText = 'margin:0 0 15px 0; padding-right:30px;';
+            modalContent.appendChild(title);
+
+            // Add close button
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '×';
+            closeBtn.style.cssText = 'position:absolute; top:15px; right:15px; font-size:28px; border:none; background:none; cursor:pointer; color:#666;';
+            closeBtn.onclick = () => document.body.removeChild(modal);
+            modalContent.appendChild(closeBtn);
+
+            // Add preview based on format
+            const previewContainer = document.createElement('div');
+            previewContainer.style.cssText = 'margin-top:10px; border:1px solid #ddd; padding:10px; background:#f9f9f9;';
+
+            if (data.format === 'html' && data.html) {
+                const iframe = document.createElement('iframe');
+                iframe.style.cssText = 'width:100%; min-height:400px; border:none; background:white;';
+                iframe.srcdoc = data.html;
+                previewContainer.appendChild(iframe);
+            } else if (data.format === 'banner' && data.banner) {
+                try {
+                    const bannerData = typeof data.banner === 'string' ? JSON.parse(data.banner) : data.banner;
+                    const imgSrc = bannerData.image || (bannerData.images && bannerData.images[0] ? bannerData.images[0].url : '');
+                    if (imgSrc) {
+                        const img = document.createElement('img');
+                        img.src = imgSrc;
+                        img.alt = bannerData.alt || 'Banner ad';
+                        img.style.cssText = 'max-width:100%; display:block; margin:0 auto;';
+
+                        // Build srcset if available
+                        if (bannerData.images && Array.isArray(bannerData.images)) {
+                            const srcsetParts = bannerData.images
+                                .filter(i => i.url && i.width)
+                                .map(i => `${i.url} ${i.width}w`);
+                            if (srcsetParts.length > 0) {
+                                img.srcset = srcsetParts.join(', ');
+                            }
+                        }
+
+                        previewContainer.appendChild(img);
+                    } else {
+                        previewContainer.textContent = 'No image available';
+                    }
+                } catch (e) {
+                    previewContainer.textContent = 'Error parsing banner data: ' + e.message;
+                }
+            } else if (data.format === 'native' && data.native) {
+                try {
+                    const nativeData = typeof data.native === 'string' ? JSON.parse(data.native) : data.native;
+                    previewContainer.innerHTML = `
+                        <div style="max-width:500px; margin:0 auto; background:white; padding:15px; border-radius:4px;">
+                            ${nativeData.title ? `<h4 style="margin:0 0 10px 0;">${nativeData.title}</h4>` : ''}
+                            ${nativeData.brand ? `<div style="color:#666; font-size:12px; margin-bottom:10px;">${nativeData.brand}</div>` : ''}
+                            ${nativeData.image_url ? `<img src="${nativeData.image_url}" alt="" style="max-width:100%; display:block; margin:10px 0;">` : ''}
+                            ${nativeData.description ? `<p style="margin:10px 0;">${nativeData.description}</p>` : ''}
+                            ${nativeData.cta_text ? `<button style="padding:8px 16px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">${nativeData.cta_text}</button>` : ''}
+                            ${nativeData.sponsored_by ? `<div style="color:#999; font-size:11px; margin-top:10px;">Sponsored by ${nativeData.sponsored_by}</div>` : ''}
+                        </div>
+                    `;
+                } catch (e) {
+                    previewContainer.textContent = 'Error parsing native data: ' + e.message;
+                }
+            } else {
+                previewContainer.textContent = 'No preview available';
+            }
+
+            modalContent.appendChild(previewContainer);
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+
+            // Close on overlay click
+            modal.onclick = (e) => {
+                if (e.target === modal) document.body.removeChild(modal);
+            };
+        }
+
         function updateCreativeContentPlaceholder(selectElement) {
             const contentTextarea = document.getElementById('creative-content');
             const format = selectElement.value;
-            
+
             if (format === 'html') {
                 contentTextarea.placeholder = "<div class='ad'><h2>Your Ad Title</h2><p>Description here</p><button>Click me!</button></div>";
             } else if (format === 'native') {
@@ -1715,6 +1869,16 @@
   "cta_text": "Shop Now",
   "sponsored_by": "Brand Name",
   "click_url": "https://example.com/landing"
+}`;
+            } else if (format === 'banner') {
+                contentTextarea.placeholder = `Banner format example:
+{
+  "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=728&h=90&fit=crop",
+  "alt": "Premium Headphones - 40% Off Spring Sale",
+  "images": [
+    {"url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=728&h=90&fit=crop", "width": 728, "height": 90},
+    {"url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1456&h=180&fit=crop", "width": 1456, "height": 180}
+  ]
 }`;
             } else {
                 contentTextarea.placeholder = 'Select format to see example';
@@ -1745,6 +1909,27 @@
                         ${data.click_url && data.cta_text ? `<a href="${data.click_url}" target="_blank">${data.cta_text}</a>` : ''}
                         ${data.sponsored_by ? `<div><small>${data.sponsored_by}</small></div>` : ''}
                     `;
+                } catch (e) {
+                    preview.innerHTML = `<div class="error-message">Invalid JSON: ${e.message}</div>`;
+                }
+            } else if (format === 'banner') {
+                try {
+                    const data = JSON.parse(content);
+                    const imgSrc = data.image || (data.images && data.images[0] ? data.images[0].url : '');
+                    const altText = data.alt || 'Banner advertisement';
+
+                    // Build srcset if images array exists
+                    let srcset = '';
+                    if (data.images && Array.isArray(data.images)) {
+                        const srcsetParts = data.images
+                            .filter(img => img.url && img.width)
+                            .map(img => `${img.url} ${img.width}w`);
+                        if (srcsetParts.length > 0) {
+                            srcset = ` srcset="${srcsetParts.join(', ')}"`;
+                        }
+                    }
+
+                    preview.innerHTML = `<img src="${imgSrc}" alt="${altText}"${srcset} style="max-width:100%; display:block;">`;
                 } catch (e) {
                     preview.innerHTML = `<div class="error-message">Invalid JSON: ${e.message}</div>`;
                 }

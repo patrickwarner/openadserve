@@ -6,6 +6,7 @@ import (
 	"github.com/patrickwarner/openadserve/internal/config"
 	"github.com/patrickwarner/openadserve/internal/db"
 	filters "github.com/patrickwarner/openadserve/internal/logic/filters"
+	"github.com/patrickwarner/openadserve/internal/logic/render"
 	"github.com/patrickwarner/openadserve/internal/models"
 )
 
@@ -44,9 +45,18 @@ func (RandomSelector) SelectAd(store *db.RedisStore, database *db.DB, dataStore 
 	if li != nil {
 		price = li.ECPM
 	}
+
+	// Compose banner HTML server-side if this is a banner creative
+	html := c.HTML
+	if len(c.Banner) > 0 {
+		html = render.ComposeBannerHTML(c.Banner)
+	}
+
 	return &models.AdResponse{
 		CreativeID: c.ID,
-		HTML:       c.HTML,
+		HTML:       html,
+		Native:     c.Native,
+		Banner:     nil, // Don't send banner JSON to client - we composed HTML instead
 		CampaignID: c.CampaignID,
 		LineItemID: c.LineItemID,
 		Price:      price,

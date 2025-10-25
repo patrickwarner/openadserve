@@ -18,7 +18,7 @@ A publisher-first ad server with OpenRTB compatibility and extensive customizati
 | Feature | Description |
 |---------|-------------|
 | **Publisher Control** | Pluggable ad selection logic, custom targeting, dual-counter pacing |
-| **Native Ad Support** | Return raw assets for seamless publisher integration |
+| **Multi-Format Ad Support** | HTML, banner (server-composed with responsive images), and native formats |
 | **Quality Control** | Built-in ad reporting system for content moderation |
 | **Analytics** | ClickHouse storage, Prometheus metrics, custom event tracking |
 | **Integration** | JavaScript SDK, server-to-server API, traffic simulator |

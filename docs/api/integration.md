@@ -12,7 +12,7 @@ The SDK is located at `static/sdk/adsdk.js` and offers several functions to fetc
 |--------|------------|-------------|
 | `setApiKey(apiKey)` | `apiKey` (string) | Set publisher API key globally |
 | `setPublisherId(publisherId)` | `publisherId` (number) | Set publisher ID globally |
-| `renderAd()` | `placementId`, `containerId`, `baseUrl?`, `keyValues?` | Render HTML ad in iframe |
+| `renderAd()` | `placementId`, `containerId`, `baseUrl?`, `keyValues?` | Render HTML or banner ad in iframe (server-composed) |
 | `renderNativeAd()` | `placementId`, `containerId`, `templateFn`, `baseUrl?`, `keyValues?` | Render native ad with custom template |
 | `fetchAd()` | `placementId`, `baseUrl?`, `keyValues?` | Get ad response without rendering |
 | `reportAd()` | `reportUrl`, `reason`, `baseUrl?` | Submit ad quality report |
@@ -70,7 +70,7 @@ The SDK automates several key tasks to simplify integration while providing hook
 2.  **API Communication**: Constructs and sends the `POST /ad` request to the ad server, including any specified `keyValues` and device information. It also handles parsing the JSON response.
     -   For debugging convenience, ad requests can include the `?debug=1` query parameter (or be enabled via the `DEBUG_TRACE` environment variable on the server) to return a detailed selection trace in the ad response. The SDK transparently passes this along if configured.
 3.  **Creative Rendering (for `renderAd` and `renderNativeAd`)**:
-    -   For standard HTML ads (`renderAd`), it securely renders the creative markup within a sandboxed iframe using the `srcdoc` attribute. This isolates the creative from the parent page, enhancing security and publisher control over their page integrity.
+    -   For HTML and banner ads (`renderAd`), it securely renders the creative markup within a sandboxed iframe using the `srcdoc` attribute. Banner creatives are server-side composed into responsive HTML before being delivered to the SDK. This isolates the creative from the parent page, enhancing security and publisher control over their page integrity.
     -   For native ads (`renderNativeAd`), it calls the publisher-provided `templateFn` with the ad assets and injects the returned HTML into the specified container, giving full display control to the publisher.
 4.  **Tracking Pixel Firing (Automated for `renderAd`, `renderNativeAd`)**: Automatically requests the `impurl` (impression URL) when an ad is successfully rendered (and typically when it becomes visible, though initial versions might fire on render). It also facilitates the handling of `clkurl` (click URL) and `evturl` (custom event URL) by ensuring these are correctly associated with the rendered ad and can be triggered by user interactions or SDK calls. For `fetchAd`, the publisher is responsible for firing these URLs.
 5.  **Token Management**: Handles the secure tokens embedded in `impurl`, `clkurl`, and `evturl`. These tokens are essential for validating tracking requests and typically expire after a configurable duration (`TOKEN_TTL`, defaulting to 30 minutes). The SDK ensures these tokens are used correctly for SDK-managed interactions.
@@ -94,6 +94,33 @@ Include the SDK and call `renderAd` for the placements you want to display. This
 ```
 
 See `static/demo/index.html` for a full working example that displays multiple placements, and `static/demo/social-feed.html` for advanced native ad integration examples.
+
+## Creative Formats
+
+The ad server supports three creative formats, each optimized for different use cases:
+
+### HTML Format
+Custom ad markup provided directly by advertisers. Rendered in a sandboxed iframe for security. Best for interactive ads, rich media, or advertiser-provided creative code.
+
+### Banner Format
+Image-based ads with responsive image support. Publishers provide banner creative data as JSON with image URLs, dimensions, and alt text. The server automatically composes banner data into optimized HTML with srcset attributes for retina/high-DPI displays. This format is ideal for standard display advertising with minimal publisher integration complexity.
+
+**Banner Creative JSON Structure:**
+```json
+{
+  "image": "https://example.com/ad-728x90.jpg",
+  "alt": "Premium Headphones - 40% Off Spring Sale",
+  "images": [
+    {"url": "https://example.com/ad-728x90.jpg", "width": 728, "height": 90},
+    {"url": "https://example.com/ad-1456x180.jpg", "width": 1456, "height": 180}
+  ]
+}
+```
+
+The server composes this into an `<img>` tag with proper srcset for responsive rendering. Publishers use the same `renderAd()` method as HTML ads - no special handling required.
+
+### Native Format
+Maximum flexibility for publishers to control ad presentation. The server returns raw JSON assets, and publishers provide a custom template function to render ads seamlessly within their site design. Best for in-feed ads, sponsored content, and custom ad layouts.
 
 ## Example: Native Ad with Custom Rendering and Event Tracking
 
