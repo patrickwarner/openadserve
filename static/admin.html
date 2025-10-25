@@ -386,6 +386,57 @@
             margin-top: 12px;
         }
 
+        /* Creative form - format-specific field styling */
+        .format-fields {
+            background: #fafafa;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            padding: 16px;
+        }
+
+        .native-kvp-container {
+            background: white;
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .native-kvp-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+            min-width: auto;
+        }
+
+        .native-kvp-table th {
+            background: #f5f5f5;
+            padding: 8px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #525252;
+            border-bottom: 1px solid #e5e5e5;
+            position: static;
+        }
+
+        .native-kvp-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .native-kvp-table tr:hover {
+            background: #fafafa;
+        }
+
+        .native-kvp-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .banner-variant-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
         label {
             display: flex;
             align-items: center;
@@ -1154,17 +1205,180 @@
                         <select name="line_item_id" required>
                             <option value="">Select Line Item</option>
                         </select>
-                        <select name="format" required onchange="updateCreativeContentPlaceholder(this)">
+                        <select name="format" required onchange="updateCreativeContentFields(this)">
                             <option value="">Select Format</option>
                             <option value="html">HTML</option>
                             <option value="native">Native</option>
                             <option value="banner">Banner</option>
                         </select>
-                        <textarea name="content" id="creative-content" placeholder="Select format to see example" rows="6" class="form-full"></textarea>
-                        <input type="url" name="click_url" placeholder="Click URL (overrides line item default, supports macros)" class="form-full">
-                        <div class="help-text">
-                            Supported macros: {AUCTION_ID}, {AUCTION_IMP_ID}, {CREATIVE_ID}, {LINE_ITEM_ID}, {CAMPAIGN_ID}, {PUBLISHER_ID}, {PLACEMENT_ID}, {TIMESTAMP}, {TIMESTAMP_MS}, {ISO_TIMESTAMP}, {RANDOM}, {UUID}. Use {CUSTOM.key} to include custom parameters from the ad request (e.g., {CUSTOM.user_segment}).
+
+                        <!-- HTML Format Fields -->
+                        <div id="html-fields" class="format-fields form-full" style="display:none;">
+                            <label style="display:block; margin-bottom:8px; font-weight:500; font-size:0.875rem;">HTML Content:</label>
+                            <textarea name="html_content" rows="10" style="font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; font-size: 0.8125rem;"></textarea>
                         </div>
+
+                        <!-- Native Format Fields -->
+                        <div id="native-fields" class="format-fields form-full" style="display:none;">
+                            <label style="display:block; margin-bottom:8px; font-weight:500; font-size:0.875rem;">Native Ad Assets:</label>
+                            <select id="native-preset" onchange="applyNativePreset(this.value)" style="margin-bottom:16px;">
+                                <option value="">Start from scratch</option>
+                                <option value="iab">IAB Native 1.2 Template</option>
+                                <option value="social">Social Feed Template</option>
+                                <option value="content">Content Recommendation Template</option>
+                            </select>
+
+                            <div class="native-kvp-container">
+                                <table class="native-kvp-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="text-align:left; width:30%;">Field Name</th>
+                                            <th style="text-align:left;">Value</th>
+                                            <th style="width:40px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="native-kvp-body">
+                                        <!-- Dynamically populated rows -->
+                                    </tbody>
+                                </table>
+                                <button type="button" onclick="addNativeField()" style="margin-top:8px;">+ Add Field</button>
+
+                                <details style="margin-top:16px;">
+                                    <summary style="cursor:pointer; font-size:0.875rem; color:#737373;">Preview JSON</summary>
+                                    <pre id="native-json-preview" style="background:#fafafa; padding:12px; border-radius:4px; font-size:0.75rem; overflow-x:auto; margin-top:8px;"></pre>
+                                </details>
+                            </div>
+
+                            <datalist id="native-field-suggestions">
+                                <option value="title">
+                                <option value="description">
+                                <option value="image">
+                                <option value="icon">
+                                <option value="thumbnail">
+                                <option value="cta_text">
+                                <option value="sponsored_by">
+                                <option value="brand">
+                                <option value="click">
+                                <option value="author">
+                                <option value="date">
+                                <option value="rating">
+                                <option value="price">
+                                <option value="background">
+                                <option value="video">
+                            </datalist>
+                        </div>
+
+                        <!-- Banner Format Fields -->
+                        <div id="banner-fields" class="format-fields form-full" style="display:none;">
+                            <label style="display:block; margin-bottom:8px; font-weight:500; font-size:0.875rem;">Primary Image URL:</label>
+                            <input type="url" name="banner_image" placeholder="https://example.com/image.jpg" onchange="updateBannerImagePreview(this.value)">
+                            <div id="banner-image-preview" style="margin-top:8px; margin-bottom:16px;"></div>
+
+                            <label style="display:block; margin-bottom:8px; font-weight:500; font-size:0.875rem;">Alt Text:</label>
+                            <input type="text" name="banner_alt" placeholder="Describe the image for accessibility" style="margin-bottom:16px;">
+
+                            <label style="display:block; margin-bottom:8px; font-weight:500; font-size:0.875rem;">Responsive Image Variants:</label>
+                            <div class="help-text" style="margin-top:-8px; margin-bottom:12px;">
+                                Add different sizes for responsive display. Each variant should include URL, width, and height.
+                            </div>
+                            <div id="banner-variants-container">
+                                <!-- Dynamically populated variant rows -->
+                            </div>
+                            <div style="display:flex; gap:8px; margin-top:8px;">
+                                <button type="button" onclick="addBannerVariant()">+ Add Image Variant</button>
+                                <select onchange="addCommonBannerSize(this.value); this.value='';" style="flex:1;">
+                                    <option value="">Quick-add common size...</option>
+                                    <option value="728x90">728×90 Leaderboard</option>
+                                    <option value="300x250">300×250 Medium Rectangle</option>
+                                    <option value="320x50">320×50 Mobile Banner</option>
+                                    <option value="300x600">300×600 Half Page</option>
+                                    <option value="970x250">970×250 Billboard</option>
+                                    <option value="160x600">160×600 Wide Skyscraper</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <input type="url" name="click_url" id="creative_click_url_field" placeholder="Click URL (overrides line item default, supports macros)" class="form-full">
+
+                        <details class="form-full" style="margin-top:8px;">
+                            <summary style="cursor:pointer; font-size:0.875rem; color:#0a0a0a; font-weight:500; padding:8px 0;">
+                                <i data-lucide="code" style="width:16px; height:16px; display:inline-block; vertical-align:middle; margin-right:6px;"></i>
+                                Available Macros - Click to Insert
+                            </summary>
+                            <div class="macro-helper" style="margin-top:8px;">
+                            <table class="macro-table">
+                                <thead>
+                                    <tr>
+                                        <th>Macro</th>
+                                        <th>Description</th>
+                                        <th>Use Case</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{AUCTION_ID}')">{AUCTION_ID}</code></td>
+                                        <td class="macro-description">Unique ID for this ad request</td>
+                                        <td class="macro-use-case">Track individual impressions</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{CREATIVE_ID}')">{CREATIVE_ID}</code></td>
+                                        <td class="macro-description">ID of the creative that won</td>
+                                        <td class="macro-use-case">A/B testing, creative performance</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{CAMPAIGN_ID}')">{CAMPAIGN_ID}</code></td>
+                                        <td class="macro-description">Campaign identifier</td>
+                                        <td class="macro-use-case">Campaign-level attribution</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{LINE_ITEM_ID}')">{LINE_ITEM_ID}</code></td>
+                                        <td class="macro-description">Line item identifier</td>
+                                        <td class="macro-use-case">Line item performance tracking</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{PUBLISHER_ID}')">{PUBLISHER_ID}</code></td>
+                                        <td class="macro-description">Publisher identifier</td>
+                                        <td class="macro-use-case">Publisher revenue share</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{PLACEMENT_ID}')">{PLACEMENT_ID}</code></td>
+                                        <td class="macro-description">Placement/ad slot identifier</td>
+                                        <td class="macro-use-case">Placement performance analysis</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{TIMESTAMP}')">{TIMESTAMP}</code></td>
+                                        <td class="macro-description">Unix timestamp (seconds)</td>
+                                        <td class="macro-use-case">Time-based analysis</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{TIMESTAMP_MS}')">{TIMESTAMP_MS}</code></td>
+                                        <td class="macro-description">Unix timestamp (milliseconds)</td>
+                                        <td class="macro-use-case">Precise timing</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{ISO_TIMESTAMP}')">{ISO_TIMESTAMP}</code></td>
+                                        <td class="macro-description">ISO 8601 formatted time</td>
+                                        <td class="macro-use-case">Human-readable timestamps</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{RANDOM}')">{RANDOM}</code></td>
+                                        <td class="macro-description">Random number (cache busting)</td>
+                                        <td class="macro-use-case">Prevent URL caching</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{UUID}')">{UUID}</code></td>
+                                        <td class="macro-description">Unique UUID v4 identifier</td>
+                                        <td class="macro-use-case">Global unique tracking</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code class="macro-code" onclick="insertMacroCreative('{CUSTOM.key}')">{CUSTOM.key}</code></td>
+                                        <td class="macro-description">Custom parameter from ad request</td>
+                                        <td class="macro-use-case">Pass custom data (user_segment, etc.)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            </div>
+                        </details>
                         <div class="form-actions">
                             <button type="button" onclick="renderCreativePreview()">Preview</button>
                             <button type="submit">Create Creative</button>
@@ -1491,6 +1705,27 @@
             }, 300);
         }
 
+        function insertMacroCreative(macro) {
+            const field = document.getElementById('creative_click_url_field');
+            const cursorPos = field.selectionStart;
+            const textBefore = field.value.substring(0, cursorPos);
+            const textAfter = field.value.substring(field.selectionEnd);
+
+            // Insert macro at cursor position
+            field.value = textBefore + macro + textAfter;
+
+            // Move cursor to end of inserted macro
+            const newCursorPos = cursorPos + macro.length;
+            field.setSelectionRange(newCursorPos, newCursorPos);
+            field.focus();
+
+            // Visual feedback
+            field.style.borderColor = '#166534';
+            setTimeout(() => {
+                field.style.borderColor = '';
+            }, 300);
+        }
+
         // Global Publisher Filter Functions
         let selectedGlobalPublisher = null;
         let allPublishers = [];
@@ -1654,28 +1889,12 @@
                     data[key] = true;
                 } else if (key === 'start_date' || key === 'end_date') {
                     data[key] = value + 'T00:00:00Z';
-                } else if (key === 'content') {
-                    const format = data.format || formData.get('format');
-                    if (format === 'html') {
-                        // Treat content as raw HTML
-                        data.html = value;
-                    } else if (format === 'native') {
-                        // Parse JSON for native creatives
-                        try {
-                            data.native = JSON.parse(value);
-                        } catch (e) {
-                            throw new Error(`Invalid JSON in content field: ${e.message}`);
-                        }
-                    } else if (format === 'banner') {
-                        // Parse JSON for banner creatives
-                        try {
-                            data.banner = JSON.parse(value);
-                        } catch (e) {
-                            throw new Error(`Invalid JSON in content field: ${e.message}`);
-                        }
-                    } else {
-                        throw new Error('Format must be selected before content');
-                    }
+                } else if (key === 'html_content') {
+                    // HTML format content
+                    data.html = value;
+                } else if (key === 'banner_image' || key === 'banner_alt') {
+                    // Skip - these will be processed separately for banner format
+                    continue;
                 } else if (['publisher_id', 'campaign_id', 'line_item_id', 'daily_impression_cap', 'daily_click_cap', 'frequency_cap'].includes(key)) {
                     data[key] = parseInt(value) || 0;
                 } else if (['cpm', 'cpc', 'budget_amount'].includes(key)) {
@@ -1683,6 +1902,52 @@
                 } else {
                     data[key] = value;
                 }
+            }
+
+            // Build format-specific content
+            const format = data.format;
+            if (format === 'native') {
+                // Build native JSON from key-value pairs
+                const rows = document.querySelectorAll('#native-kvp-body tr');
+                const nativeObj = {};
+                rows.forEach(row => {
+                    const key = row.querySelector('.native-key').value.trim();
+                    const value = row.querySelector('.native-value').value;
+                    if (key) {
+                        nativeObj[key] = value;
+                    }
+                });
+                if (Object.keys(nativeObj).length === 0) {
+                    throw new Error('Native format requires at least one field');
+                }
+                data.native = nativeObj;
+            } else if (format === 'banner') {
+                // Build banner JSON from structured fields
+                const image = formData.get('banner_image');
+                const alt = formData.get('banner_alt');
+
+                if (!image) {
+                    throw new Error('Banner format requires primary image URL');
+                }
+                if (!alt) {
+                    throw new Error('Banner format requires alt text for accessibility');
+                }
+
+                const variants = [];
+                document.querySelectorAll('.banner-variant-row').forEach(row => {
+                    const url = row.querySelector('.banner-variant-url').value;
+                    const width = parseInt(row.querySelector('.banner-variant-width').value);
+                    const height = parseInt(row.querySelector('.banner-variant-height').value);
+                    if (url && width && height) {
+                        variants.push({ url, width, height });
+                    }
+                });
+
+                data.banner = {
+                    image: image,
+                    alt: alt,
+                    images: variants
+                };
             }
 
             try {
@@ -2108,85 +2373,227 @@
             };
         }
 
-        function updateCreativeContentPlaceholder(selectElement) {
-            const contentTextarea = document.getElementById('creative-content');
+        // Format-specific field management
+        function updateCreativeContentFields(selectElement) {
             const format = selectElement.value;
 
+            // Hide all format-specific fields
+            document.querySelectorAll('.format-fields').forEach(el => el.style.display = 'none');
+
+            // Show relevant format fields
             if (format === 'html') {
-                contentTextarea.placeholder = "<div class='ad'><h2>Your Ad Title</h2><p>Description here</p><button>Click me!</button></div>";
+                document.getElementById('html-fields').style.display = 'block';
             } else if (format === 'native') {
-                contentTextarea.placeholder = `Native format example:
-{
-  "title": "Amazing Product",
-  "description": "Get 50% off today only!",
-  "image_url": "https://example.com/image.jpg",
-  "cta_text": "Shop Now",
-  "sponsored_by": "Brand Name",
-  "click_url": "https://example.com/landing"
-}`;
+                document.getElementById('native-fields').style.display = 'block';
+                initializeNativeFields(); // Start with one empty row
             } else if (format === 'banner') {
-                contentTextarea.placeholder = `Banner format example:
-{
-  "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=728&h=90&fit=crop",
-  "alt": "Premium Headphones - 40% Off Spring Sale",
-  "images": [
-    {"url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=728&h=90&fit=crop", "width": 728, "height": 90},
-    {"url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1456&h=180&fit=crop", "width": 1456, "height": 180}
-  ]
-}`;
+                document.getElementById('banner-fields').style.display = 'block';
+            }
+        }
+
+        // Native ad key-value pair management
+        function addNativeField(key = '', value = '') {
+            const tbody = document.getElementById('native-kvp-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="text" class="native-key" value="${key}"
+                           placeholder="e.g., title, image, cta_text"
+                           list="native-field-suggestions"
+                           style="width:100%; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
+                </td>
+                <td>
+                    <input type="text" class="native-value" value="${value}"
+                           placeholder="Value"
+                           style="width:100%; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
+                </td>
+                <td>
+                    <button type="button" onclick="this.closest('tr').remove(); updateNativePreview()"
+                            style="padding:4px 8px; background:#fafafa; border:1px solid #e5e5e5; border-radius:4px; cursor:pointer;">×</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+
+            // Add event listeners for live preview update
+            row.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', updateNativePreview);
+            });
+
+            updateNativePreview();
+        }
+
+        function initializeNativeFields() {
+            const tbody = document.getElementById('native-kvp-body');
+            if (tbody.children.length === 0) {
+                addNativeField(); // Start with one empty row
+            }
+        }
+
+        function applyNativePreset(preset) {
+            document.getElementById('native-kvp-body').innerHTML = '';
+
+            const presets = {
+                iab: [
+                    ['title', 'Your Ad Title'],
+                    ['description', 'Your ad description goes here'],
+                    ['image', 'https://example.com/image.jpg'],
+                    ['icon', 'https://example.com/icon.png'],
+                    ['cta_text', 'Learn More'],
+                    ['sponsored_by', 'Brand Name']
+                ],
+                social: [
+                    ['title', 'Ad Headline'],
+                    ['brand', 'Brand Name'],
+                    ['description', 'Engaging description'],
+                    ['image', 'https://example.com/image.jpg'],
+                    ['click', 'https://example.com/landing'],
+                    ['cta_text', 'Shop Now']
+                ],
+                content: [
+                    ['title', 'Article Title'],
+                    ['description', 'Article excerpt or summary'],
+                    ['image', 'https://example.com/thumbnail.jpg'],
+                    ['thumbnail', 'https://example.com/thumb-small.jpg'],
+                    ['author', 'Author Name'],
+                    ['date', '2025-01-15']
+                ]
+            };
+
+            if (presets[preset]) {
+                presets[preset].forEach(([key, value]) => addNativeField(key, value));
             } else {
-                contentTextarea.placeholder = 'Select format to see example';
+                addNativeField(); // Empty row
+            }
+        }
+
+        function updateNativePreview() {
+            const rows = document.querySelectorAll('#native-kvp-body tr');
+            const obj = {};
+
+            rows.forEach(row => {
+                const key = row.querySelector('.native-key').value.trim();
+                const value = row.querySelector('.native-value').value;
+                if (key) {
+                    obj[key] = value;
+                }
+            });
+
+            document.getElementById('native-json-preview').textContent =
+                JSON.stringify(obj, null, 2);
+        }
+
+        // Banner ad variant management
+        function addBannerVariant(url = '', width = '', height = '') {
+            const container = document.getElementById('banner-variants-container');
+            const div = document.createElement('div');
+            div.className = 'banner-variant-row';
+            div.style.cssText = 'display:flex; gap:8px; margin-bottom:8px; align-items:center;';
+            div.innerHTML = `
+                <input type="url" class="banner-variant-url" value="${url}"
+                       placeholder="https://example.com/image.jpg?w=728&h=90"
+                       style="flex:2; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
+                <input type="number" class="banner-variant-width" value="${width}"
+                       placeholder="Width" min="1"
+                       style="flex:0 0 80px; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
+                <input type="number" class="banner-variant-height" value="${height}"
+                       placeholder="Height" min="1"
+                       style="flex:0 0 80px; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
+                <button type="button" onclick="this.closest('.banner-variant-row').remove()"
+                        style="flex:0 0 auto; padding:4px 8px; background:#fafafa; border:1px solid #e5e5e5; border-radius:4px; cursor:pointer;">×</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function addCommonBannerSize(size) {
+            if (!size) return;
+            const [width, height] = size.split('x');
+            const baseUrl = document.querySelector('[name="banner_image"]').value || 'https://example.com/image.jpg';
+            // Add query params to indicate the desired size
+            const separator = baseUrl.includes('?') ? '&' : '?';
+            const url = `${baseUrl}${separator}w=${width}&h=${height}`;
+            addBannerVariant(url, width, height);
+        }
+
+        function updateBannerImagePreview(url) {
+            const preview = document.getElementById('banner-image-preview');
+            if (url && url.trim()) {
+                preview.innerHTML = `<img src="${url}" alt="Banner preview" style="max-width:100%; max-height:150px; border:1px solid #e5e5e5; border-radius:4px;">`;
+            } else {
+                preview.innerHTML = '';
             }
         }
 
         function renderCreativePreview() {
             const format = document.querySelector('#creatives select[name="format"]').value;
-            const content = document.getElementById('creative-content').value;
             const preview = document.getElementById('creative-preview');
             preview.style.display = 'block';
             preview.innerHTML = '';
 
-            if (!content.trim()) {
-                preview.textContent = 'No content to preview';
+            if (!format) {
+                preview.textContent = 'Select format to preview';
                 return;
             }
 
             if (format === 'html') {
+                const content = document.querySelector('[name="html_content"]').value;
+                if (!content.trim()) {
+                    preview.textContent = 'No content to preview';
+                    return;
+                }
                 preview.innerHTML = content;
             } else if (format === 'native') {
-                try {
-                    const data = JSON.parse(content);
-                    preview.innerHTML = `
-                        <div><strong>${data.title || ''}</strong></div>
-                        ${data.image_url ? `<img src="${data.image_url}" alt="" style="max-width:100%;">` : ''}
-                        <p>${data.description || ''}</p>
-                        ${data.click_url && data.cta_text ? `<a href="${data.click_url}" target="_blank">${data.cta_text}</a>` : ''}
-                        ${data.sponsored_by ? `<div><small>${data.sponsored_by}</small></div>` : ''}
-                    `;
-                } catch (e) {
-                    preview.innerHTML = `<div class="error-message">Invalid JSON: ${e.message}</div>`;
-                }
-            } else if (format === 'banner') {
-                try {
-                    const data = JSON.parse(content);
-                    const imgSrc = data.image || (data.images && data.images[0] ? data.images[0].url : '');
-                    const altText = data.alt || 'Banner advertisement';
-
-                    // Build srcset if images array exists
-                    let srcset = '';
-                    if (data.images && Array.isArray(data.images)) {
-                        const srcsetParts = data.images
-                            .filter(img => img.url && img.width)
-                            .map(img => `${img.url} ${img.width}w`);
-                        if (srcsetParts.length > 0) {
-                            srcset = ` srcset="${srcsetParts.join(', ')}"`;
-                        }
+                // Build native data from key-value pairs
+                const rows = document.querySelectorAll('#native-kvp-body tr');
+                const data = {};
+                rows.forEach(row => {
+                    const key = row.querySelector('.native-key').value.trim();
+                    const value = row.querySelector('.native-value').value;
+                    if (key) {
+                        data[key] = value;
                     }
+                });
 
-                    preview.innerHTML = `<img src="${imgSrc}" alt="${altText}"${srcset} style="max-width:100%; display:block;">`;
-                } catch (e) {
-                    preview.innerHTML = `<div class="error-message">Invalid JSON: ${e.message}</div>`;
+                if (Object.keys(data).length === 0) {
+                    preview.textContent = 'No native ad fields defined';
+                    return;
                 }
+
+                // Render native ad preview with flexible fields
+                let previewHtml = '<div style="border:1px solid #e5e5e5; padding:16px; border-radius:4px;">';
+                if (data.title) previewHtml += `<div style="font-weight:600; font-size:1.125rem; margin-bottom:8px;">${data.title}</div>`;
+                if (data.image || data.image_url) previewHtml += `<img src="${data.image || data.image_url}" alt="" style="max-width:100%; margin-bottom:8px;">`;
+                if (data.description) previewHtml += `<p style="margin:8px 0;">${data.description}</p>`;
+                if (data.cta_text) previewHtml += `<button style="padding:8px 16px; background:#0a0a0a; color:white; border:none; border-radius:4px; cursor:pointer; margin-top:8px;">${data.cta_text}</button>`;
+                if (data.sponsored_by || data.brand) previewHtml += `<div style="font-size:0.75rem; color:#737373; margin-top:8px;">Sponsored by ${data.sponsored_by || data.brand}</div>`;
+                previewHtml += '</div>';
+                preview.innerHTML = previewHtml;
+            } else if (format === 'banner') {
+                // Build banner data from form fields
+                const image = document.querySelector('[name="banner_image"]').value;
+                const alt = document.querySelector('[name="banner_alt"]').value || 'Banner advertisement';
+
+                if (!image) {
+                    preview.textContent = 'No banner image URL provided';
+                    return;
+                }
+
+                // Collect image variants
+                const variants = [];
+                document.querySelectorAll('.banner-variant-row').forEach(row => {
+                    const url = row.querySelector('.banner-variant-url').value;
+                    const width = parseInt(row.querySelector('.banner-variant-width').value);
+                    if (url && width) {
+                        variants.push({ url, width });
+                    }
+                });
+
+                // Build srcset if variants exist
+                let srcset = '';
+                if (variants.length > 0) {
+                    srcset = ` srcset="${variants.map(v => `${v.url} ${v.width}w`).join(', ')}"`;
+                }
+
+                preview.innerHTML = `<img src="${image}" alt="${alt}"${srcset} style="max-width:100%; display:block; border:1px solid #e5e5e5;">`;
             } else {
                 preview.textContent = 'Select format to preview';
             }
