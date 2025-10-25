@@ -8,7 +8,7 @@
 //
 //	go run ./tools/campaign_report -campaign-id=123 -days=30
 //
-// The tool outputs a professional-formatted report including:
+// The tool outputs a formatted report including:
 //   - Overall performance summary (impressions, clicks, CTR, spend)
 //   - Daily performance breakdown
 //   - Top performing creatives ranked by CTR
@@ -35,53 +35,9 @@ import (
 
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/lib/pq"
+
+	"github.com/patrickwarner/openadserve/internal/reporting"
 )
-
-// CampaignMetrics represents performance metrics for a campaign over a specific time period.
-// All financial metrics are in USD. CTR is expressed as a percentage (0-100).
-type CampaignMetrics struct {
-	CampaignID  int       // Campaign identifier
-	Date        time.Time // Date for daily metrics, current time for totals
-	Impressions int64     // Total ad impressions served
-	Clicks      int64     // Total clicks received
-	Spend       float64   // Total amount spent in USD
-	CTR         float64   // Click-through rate as percentage (clicks/impressions * 100)
-	CPM         float64   // Cost per mille (cost per 1000 impressions) in USD
-	CPC         float64   // Cost per click in USD
-}
-
-// CampaignSummary contains comprehensive campaign performance data including
-// overall metrics, daily breakdowns, creative performance analysis, and line item breakdowns.
-type CampaignSummary struct {
-	CampaignID      int               // Campaign identifier
-	TotalMetrics    CampaignMetrics   // Aggregated metrics for the entire reporting period
-	DailyMetrics    []CampaignMetrics // Day-by-day performance breakdown
-	TopCreatives    []CreativeMetrics // Top performing creatives ranked by CTR
-	LineItemMetrics []LineItemMetrics // Performance breakdown by line item
-}
-
-// CreativeMetrics represents performance metrics for individual creatives within a campaign.
-// Used to identify top and bottom performing creative assets.
-type CreativeMetrics struct {
-	CreativeID  int     // Creative asset identifier
-	Impressions int64   // Total impressions for this creative
-	Clicks      int64   // Total clicks for this creative
-	CTR         float64 // Click-through rate as percentage
-	Spend       float64 // Total spend for this creative in USD
-}
-
-// LineItemMetrics represents performance metrics for individual line items within a campaign.
-// Used to analyze delivery performance and budget utilization across different line items.
-type LineItemMetrics struct {
-	LineItemID  int     // Line item identifier
-	Impressions int64   // Total impressions for this line item
-	Clicks      int64   // Total clicks for this line item
-	Spend       float64 // Total spend for this line item in USD
-	CTR         float64 // Click-through rate as percentage
-	CPM         float64 // Cost per mille (cost per 1000 impressions) in USD
-	CPC         float64 // Cost per click in USD
-	BudgetType  string  // Budget type: "cpm", "cpc", or "flat"
-}
 
 // main is the entry point for the campaign report tool. It parses command line flags,
 // establishes a connection to ClickHouse, generates the campaign report, and outputs
@@ -117,8 +73,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Generate campaign report
-	summary, err := generateCampaignReport(db, *campaignID, *days)
+	// Generate campaign report using shared package
+	summary, err := reporting.GenerateCampaignReport(context.Background(), db, *campaignID, *days)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating report: %v\n", err)
 		os.Exit(1)
@@ -128,189 +84,10 @@ func main() {
 	printCampaignReport(summary, *days)
 }
 
-// generateCampaignReport queries ClickHouse for campaign performance data and
-// assembles a comprehensive report including daily metrics, totals, and creative performance.
-// Returns a CampaignSummary with all calculated metrics and insights.
-func generateCampaignReport(db *sql.DB, campaignID int, days int) (*CampaignSummary, error) {
-	summary := &CampaignSummary{
-		CampaignID: campaignID,
-	}
-
-	// Get daily metrics from ClickHouse
-	dailyMetrics, err := getDailyMetrics(db, campaignID, days)
-	if err != nil {
-		return nil, fmt.Errorf("get daily metrics: %w", err)
-	}
-	summary.DailyMetrics = dailyMetrics
-
-	// Calculate aggregated total metrics from daily data
-	totalMetrics := CampaignMetrics{
-		CampaignID: campaignID,
-		Date:       time.Now(),
-	}
-
-	for _, dm := range dailyMetrics {
-		totalMetrics.Impressions += dm.Impressions
-		totalMetrics.Clicks += dm.Clicks
-		totalMetrics.Spend += dm.Spend
-	}
-
-	// Calculate derived metrics (CTR, CPM, CPC)
-	if totalMetrics.Impressions > 0 {
-		totalMetrics.CTR = float64(totalMetrics.Clicks) / float64(totalMetrics.Impressions) * 100
-		totalMetrics.CPM = totalMetrics.Spend / float64(totalMetrics.Impressions) * 1000
-	}
-	if totalMetrics.Clicks > 0 {
-		totalMetrics.CPC = totalMetrics.Spend / float64(totalMetrics.Clicks)
-	}
-	summary.TotalMetrics = totalMetrics
-
-	// Get top performing creatives ranked by CTR
-	topCreatives, err := getTopCreatives(db, campaignID, days, 5)
-	if err != nil {
-		return nil, fmt.Errorf("get top creatives: %w", err)
-	}
-	summary.TopCreatives = topCreatives
-
-	// Get line item performance metrics
-	lineItemMetrics, err := getLineItemMetrics(db, campaignID, days)
-	if err != nil {
-		return nil, fmt.Errorf("get line item metrics: %w", err)
-	}
-	summary.LineItemMetrics = lineItemMetrics
-
-	return summary, nil
-}
-
-// getDailyMetrics queries ClickHouse for daily performance metrics for the specified
-// campaign over the given number of days. Returns metrics grouped by date with
-// calculated CTR, CPM, and CPC for each day.
-func getDailyMetrics(db *sql.DB, campaignID int, days int) ([]CampaignMetrics, error) {
-	query := `
-		SELECT 
-			toDate(timestamp) as date,
-			countIf(event_type = 'impression') as impressions,
-			countIf(event_type = 'click') as clicks,
-			sum(cost) as spend,
-			round(clicks / impressions * 100, 2) as ctr,
-			round(spend / impressions * 1000, 2) as cpm,
-			round(if(clicks > 0, spend / clicks, 0), 2) as cpc
-		FROM events
-		WHERE campaign_id = ? 
-			AND timestamp >= now() - INTERVAL ? DAY
-		GROUP BY date
-		ORDER BY date DESC`
-
-	rows, err := db.QueryContext(context.Background(), query, campaignID, days)
-	if err != nil {
-		return nil, fmt.Errorf("query daily metrics: %w", err)
-	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to close rows: %v\n", err)
-		}
-	}()
-
-	var metrics []CampaignMetrics
-	for rows.Next() {
-		var m CampaignMetrics
-		m.CampaignID = campaignID // Set it directly since we're filtering by it
-		err := rows.Scan(&m.Date, &m.Impressions, &m.Clicks,
-			&m.Spend, &m.CTR, &m.CPM, &m.CPC)
-		if err != nil {
-			return nil, fmt.Errorf("scan daily metrics: %w", err)
-		}
-		metrics = append(metrics, m)
-	}
-	return metrics, rows.Err()
-}
-
-// getTopCreatives queries ClickHouse for the top performing creatives within a campaign
-// ranked by CTR (click-through rate). Only includes creatives with non-null IDs and
-// returns up to 'limit' results ordered by CTR descending.
-func getTopCreatives(db *sql.DB, campaignID int, days int, limit int) ([]CreativeMetrics, error) {
-	query := `
-		SELECT 
-			assumeNotNull(creative_id) as creative_id,
-			countIf(event_type = 'impression') as impressions,
-			countIf(event_type = 'click') as clicks,
-			round(clicks / impressions * 100, 2) as ctr,
-			sum(cost) as spend
-		FROM events
-		WHERE campaign_id = ? 
-			AND creative_id IS NOT NULL
-			AND timestamp >= now() - INTERVAL ? DAY
-		GROUP BY creative_id
-		ORDER BY ctr DESC
-		LIMIT ?`
-
-	rows, err := db.QueryContext(context.Background(), query, campaignID, days, limit)
-	if err != nil {
-		return nil, fmt.Errorf("query top creatives: %w", err)
-	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to close rows: %v\n", err)
-		}
-	}()
-
-	var creatives []CreativeMetrics
-	for rows.Next() {
-		var c CreativeMetrics
-		err := rows.Scan(&c.CreativeID, &c.Impressions, &c.Clicks, &c.CTR, &c.Spend)
-		if err != nil {
-			return nil, fmt.Errorf("scan creative metrics: %w", err)
-		}
-		creatives = append(creatives, c)
-	}
-	return creatives, rows.Err()
-}
-
-// getLineItemMetrics queries ClickHouse for performance metrics of all line items within a campaign.
-// Returns metrics grouped by line item ID with calculated CTR, CPM, and CPC for each line item.
-func getLineItemMetrics(db *sql.DB, campaignID int, days int) ([]LineItemMetrics, error) {
-	query := `
-		SELECT 
-			assumeNotNull(line_item_id) as line_item_id,
-			countIf(event_type = 'impression') as impressions,
-			countIf(event_type = 'click') as clicks,
-			sum(cost) as spend,
-			round(clicks / impressions * 100, 2) as ctr,
-			round(spend / impressions * 1000, 2) as cpm,
-			round(if(clicks > 0, spend / clicks, 0), 2) as cpc
-		FROM events
-		WHERE campaign_id = ? 
-			AND line_item_id IS NOT NULL
-			AND timestamp >= now() - INTERVAL ? DAY
-		GROUP BY line_item_id
-		ORDER BY impressions DESC`
-
-	rows, err := db.QueryContext(context.Background(), query, campaignID, days)
-	if err != nil {
-		return nil, fmt.Errorf("query line item metrics: %w", err)
-	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to close rows: %v\n", err)
-		}
-	}()
-
-	var lineItems []LineItemMetrics
-	for rows.Next() {
-		var li LineItemMetrics
-		err := rows.Scan(&li.LineItemID, &li.Impressions, &li.Clicks, &li.Spend, &li.CTR, &li.CPM, &li.CPC)
-		if err != nil {
-			return nil, fmt.Errorf("scan line item metrics: %w", err)
-		}
-		lineItems = append(lineItems, li)
-	}
-	return lineItems, rows.Err()
-}
-
 // printCampaignReport outputs a professionally formatted campaign performance report
 // to stdout. The report includes overall metrics, daily breakdown tables, creative
 // performance analysis, and automated insights with optimization recommendations.
-func printCampaignReport(summary *CampaignSummary, days int) {
+func printCampaignReport(summary *reporting.CampaignSummary, days int) {
 	fmt.Printf("═══════════════════════════════════════════════════════════════════════════════════\n")
 	fmt.Printf("                              CAMPAIGN PERFORMANCE REPORT                          \n")
 	fmt.Printf("═══════════════════════════════════════════════════════════════════════════════════\n")

@@ -308,7 +308,17 @@
             background: #fafafa;
             border-color: #d4d4d4;
         }
-        
+        .btn-action {
+            background: #0a0a0a;
+            color: white;
+            border: 1px solid #0a0a0a;
+            margin-right: 6px;
+        }
+        .btn-action:hover {
+            background: #262626;
+            border-color: #262626;
+        }
+
         .status-badge {
             display: inline-block;
             padding: 2px 8px;
@@ -620,6 +630,213 @@
         }
         .gridjs-sort-neutral::after {
             opacity: 0.3;
+        }
+
+        /* Campaign Report Modal */
+        .report-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.2s ease;
+        }
+        .report-modal.show {
+            display: block;
+        }
+        .report-modal-content {
+            background-color: #fafafa;
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1400px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+        }
+        .report-modal-header {
+            padding: 24px 32px;
+            background: white;
+            border-bottom: 1px solid #e5e5e5;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .report-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0a0a0a;
+        }
+        .report-modal-close {
+            font-size: 2rem;
+            font-weight: 300;
+            color: #737373;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+        }
+        .report-modal-close:hover {
+            background: #fafafa;
+            color: #0a0a0a;
+        }
+        .report-modal-body {
+            padding: 32px;
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+        .report-controls {
+            background: white;
+            padding: 16px 24px;
+            border-radius: 6px;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            border: 1px solid #e5e5e5;
+        }
+        .report-controls label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #525252;
+        }
+        .report-controls select {
+            padding: 6px 10px;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+        }
+        .report-controls button {
+            padding: 6px 16px;
+            background: #0a0a0a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .report-controls button:hover {
+            background: #262626;
+        }
+        .report-summary {
+            background: white;
+            padding: 24px;
+            border-radius: 6px;
+            margin-bottom: 24px;
+            border: 1px solid #e5e5e5;
+        }
+        .report-summary h3 {
+            margin: 0 0 16px 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #0a0a0a;
+        }
+        .report-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+        .report-metric {
+            padding: 16px;
+            background: #fafafa;
+            border-radius: 4px;
+            border: 1px solid #e5e5e5;
+        }
+        .report-metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #737373;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .report-metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0a0a0a;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+        .report-section {
+            background: white;
+            padding: 24px;
+            border-radius: 6px;
+            margin-bottom: 24px;
+            border: 1px solid #e5e5e5;
+        }
+        .report-section h3 {
+            margin: 0 0 16px 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #0a0a0a;
+        }
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        .report-table th {
+            text-align: left;
+            padding: 12px;
+            background: #fafafa;
+            border-bottom: 2px solid #e5e5e5;
+            font-weight: 600;
+            color: #525252;
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .report-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f5f5f5;
+            color: #0a0a0a;
+        }
+        .report-table tr:hover {
+            background: #fafafa;
+        }
+        .report-loading {
+            text-align: center;
+            padding: 48px;
+            color: #737373;
+        }
+        .report-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 16px 24px;
+            border-radius: 6px;
+            margin: 24px 0;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -1040,6 +1257,32 @@
                 <h2>Forecast Results</h2>
                 <div id="forecast-summary"></div>
                 <div id="forecast-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Report Modal -->
+    <div id="reportModal" class="report-modal">
+        <div class="report-modal-content">
+            <div class="report-modal-header">
+                <h2 id="reportModalTitle">Campaign Report</h2>
+                <button class="report-modal-close" onclick="closeReportModal()">&times;</button>
+            </div>
+            <div class="report-modal-body">
+                <div class="report-controls">
+                    <label for="reportDays">Time Period:</label>
+                    <select id="reportDays">
+                        <option value="7">Last 7 Days</option>
+                        <option value="14">Last 14 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="60">Last 60 Days</option>
+                        <option value="90">Last 90 Days</option>
+                    </select>
+                    <button onclick="refreshReport()">Refresh Report</button>
+                </div>
+                <div id="reportContent">
+                    <div class="report-loading">Loading report...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -1630,6 +1873,17 @@
                     formatter: (cell, row) => {
                         const id = row.cells[0].data; // Assumes first column is ID
                         const idStr = typeof id === 'string' ? `'${id}'` : id;
+
+                        // For campaigns, add a "View Report" button
+                        if (entityType === 'campaigns') {
+                            const name = row.cells[2]?.data || ''; // Campaign name is typically the 3rd column (index 2)
+                            const nameStr = typeof name === 'string' ? `'${name.replace(/'/g, "\\'")}'` : `''`;
+                            return gridjs.html(`
+                                <button class="btn-action" onclick="openCampaignReport(${idStr}, ${nameStr})">View Report</button>
+                                <button class="delete" onclick="deleteEntity('${entityType}', ${idStr})">Delete</button>
+                            `);
+                        }
+
                         return gridjs.html(`
                             <button class="delete" onclick="deleteEntity('${entityType}', ${idStr})">Delete</button>
                         `);
@@ -2326,6 +2580,221 @@
                 placementHeight.value = 250;
             }
         });
+
+        // Campaign Report Functions
+        let currentReportCampaignId = null;
+
+        function openCampaignReport(campaignId, campaignName) {
+            currentReportCampaignId = campaignId;
+            document.getElementById('reportModalTitle').textContent = `Campaign Report: ${campaignName || campaignId}`;
+            document.getElementById('reportModal').classList.add('show');
+            loadCampaignReport(campaignId);
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.remove('show');
+            currentReportCampaignId = null;
+        }
+
+        function refreshReport() {
+            if (currentReportCampaignId) {
+                loadCampaignReport(currentReportCampaignId);
+            }
+        }
+
+        async function loadCampaignReport(campaignId) {
+            const days = document.getElementById('reportDays').value;
+            const reportContent = document.getElementById('reportContent');
+            reportContent.innerHTML = '<div class="report-loading">Loading report...</div>';
+
+            try {
+                const response = await fetch(`/api/campaigns/${campaignId}/report?days=${days}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load report: ${response.statusText}`);
+                }
+                const data = await response.json();
+                renderCampaignReport(data);
+            } catch (error) {
+                reportContent.innerHTML = `
+                    <div class="report-error">
+                        <strong>Error loading report:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function renderCampaignReport(summary) {
+            const total = summary.total_metrics;
+            const formatNumber = (num) => {
+                return num.toLocaleString('en-US');
+            };
+            const formatCurrency = (num) => {
+                return '$' + num.toFixed(2);
+            };
+            const formatPercent = (num) => {
+                return num.toFixed(2) + '%';
+            };
+
+            let html = `
+                <div class="report-summary">
+                    <h3>Overall Performance</h3>
+                    <div class="report-metrics">
+                        <div class="report-metric">
+                            <div class="report-metric-label">Impressions</div>
+                            <div class="report-metric-value">${formatNumber(total.impressions)}</div>
+                        </div>
+                        <div class="report-metric">
+                            <div class="report-metric-label">Clicks</div>
+                            <div class="report-metric-value">${formatNumber(total.clicks)}</div>
+                        </div>
+                        <div class="report-metric">
+                            <div class="report-metric-label">CTR</div>
+                            <div class="report-metric-value">${formatPercent(total.ctr)}</div>
+                        </div>
+                        <div class="report-metric">
+                            <div class="report-metric-label">Total Spend</div>
+                            <div class="report-metric-value">${formatCurrency(total.spend)}</div>
+                        </div>
+                        <div class="report-metric">
+                            <div class="report-metric-label">Avg CPM</div>
+                            <div class="report-metric-value">${formatCurrency(total.cpm)}</div>
+                        </div>
+                        <div class="report-metric">
+                            <div class="report-metric-label">Avg CPC</div>
+                            <div class="report-metric-value">${formatCurrency(total.cpc)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Daily Breakdown
+            if (summary.daily_metrics && summary.daily_metrics.length > 0) {
+                html += `
+                    <div class="report-section">
+                        <h3>Daily Breakdown</h3>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Impressions</th>
+                                    <th>Clicks</th>
+                                    <th>CTR</th>
+                                    <th>Spend</th>
+                                    <th>CPM</th>
+                                    <th>CPC</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                summary.daily_metrics.forEach(day => {
+                    const date = new Date(day.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                    html += `
+                        <tr>
+                            <td>${date}</td>
+                            <td>${formatNumber(day.impressions)}</td>
+                            <td>${formatNumber(day.clicks)}</td>
+                            <td>${formatPercent(day.ctr)}</td>
+                            <td>${formatCurrency(day.spend)}</td>
+                            <td>${formatCurrency(day.cpm)}</td>
+                            <td>${formatCurrency(day.cpc)}</td>
+                        </tr>
+                    `;
+                });
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // Line Item Breakdown
+            if (summary.line_item_metrics && summary.line_item_metrics.length > 0) {
+                html += `
+                    <div class="report-section">
+                        <h3>Line Item Performance</h3>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Line Item ID</th>
+                                    <th>Impressions</th>
+                                    <th>Clicks</th>
+                                    <th>CTR</th>
+                                    <th>Spend</th>
+                                    <th>CPM</th>
+                                    <th>CPC</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                summary.line_item_metrics.forEach(li => {
+                    html += `
+                        <tr>
+                            <td>${li.line_item_id}</td>
+                            <td>${formatNumber(li.impressions)}</td>
+                            <td>${formatNumber(li.clicks)}</td>
+                            <td>${formatPercent(li.ctr)}</td>
+                            <td>${formatCurrency(li.spend)}</td>
+                            <td>${formatCurrency(li.cpm)}</td>
+                            <td>${formatCurrency(li.cpc)}</td>
+                        </tr>
+                    `;
+                });
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // Top Creatives
+            if (summary.top_creatives && summary.top_creatives.length > 0) {
+                html += `
+                    <div class="report-section">
+                        <h3>Top Performing Creatives</h3>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Creative ID</th>
+                                    <th>Impressions</th>
+                                    <th>Clicks</th>
+                                    <th>CTR</th>
+                                    <th>Spend</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                summary.top_creatives.forEach(creative => {
+                    html += `
+                        <tr>
+                            <td>${creative.creative_id}</td>
+                            <td>${formatNumber(creative.impressions)}</td>
+                            <td>${formatNumber(creative.clicks)}</td>
+                            <td>${formatPercent(creative.ctr)}</td>
+                            <td>${formatCurrency(creative.spend)}</td>
+                        </tr>
+                    `;
+                });
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            document.getElementById('reportContent').innerHTML = html;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('reportModal');
+            if (event.target === modal) {
+                closeReportModal();
+            }
+        };
     </script>
 </body>
 </html>
