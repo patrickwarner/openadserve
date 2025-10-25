@@ -2348,12 +2348,12 @@
                     const nativeData = typeof data.native === 'string' ? JSON.parse(data.native) : data.native;
                     previewContainer.innerHTML = `
                         <div style="max-width:500px; margin:0 auto; background:white; padding:15px; border-radius:4px;">
-                            ${nativeData.title ? `<h4 style="margin:0 0 10px 0;">${nativeData.title}</h4>` : ''}
-                            ${nativeData.brand ? `<div style="color:#666; font-size:12px; margin-bottom:10px;">${nativeData.brand}</div>` : ''}
-                            ${nativeData.image_url ? `<img src="${nativeData.image_url}" alt="" style="max-width:100%; display:block; margin:10px 0;">` : ''}
-                            ${nativeData.description ? `<p style="margin:10px 0;">${nativeData.description}</p>` : ''}
-                            ${nativeData.cta_text ? `<button style="padding:8px 16px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">${nativeData.cta_text}</button>` : ''}
-                            ${nativeData.sponsored_by ? `<div style="color:#999; font-size:11px; margin-top:10px;">Sponsored by ${nativeData.sponsored_by}</div>` : ''}
+                            ${nativeData.title ? `<h4 style="margin:0 0 10px 0;">${escapeHtml(nativeData.title)}</h4>` : ''}
+                            ${nativeData.brand ? `<div style="color:#666; font-size:12px; margin-bottom:10px;">${escapeHtml(nativeData.brand)}</div>` : ''}
+                            ${nativeData.image_url ? `<img src="${escapeHtml(nativeData.image_url)}" alt="" style="max-width:100%; display:block; margin:10px 0;">` : ''}
+                            ${nativeData.description ? `<p style="margin:10px 0;">${escapeHtml(nativeData.description)}</p>` : ''}
+                            ${nativeData.cta_text ? `<button style="padding:8px 16px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">${escapeHtml(nativeData.cta_text)}</button>` : ''}
+                            ${nativeData.sponsored_by ? `<div style="color:#999; font-size:11px; margin-top:10px;">Sponsored by ${escapeHtml(nativeData.sponsored_by)}</div>` : ''}
                         </div>
                     `;
                 } catch (e) {
@@ -2371,6 +2371,17 @@
             modal.onclick = (e) => {
                 if (e.target === modal) document.body.removeChild(modal);
             };
+        }
+
+        // HTML escape function to prevent XSS
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         // Format-specific field management
@@ -2397,13 +2408,13 @@
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>
-                    <input type="text" class="native-key" value="${key}"
+                    <input type="text" class="native-key" value="${escapeHtml(key)}"
                            placeholder="e.g., title, image, cta_text"
                            list="native-field-suggestions"
                            style="width:100%; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
                 </td>
                 <td>
-                    <input type="text" class="native-value" value="${value}"
+                    <input type="text" class="native-value" value="${escapeHtml(value)}"
                            placeholder="Value"
                            style="width:100%; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
                 </td>
@@ -2489,13 +2500,13 @@
             div.className = 'banner-variant-row';
             div.style.cssText = 'display:flex; gap:8px; margin-bottom:8px; align-items:center;';
             div.innerHTML = `
-                <input type="url" class="banner-variant-url" value="${url}"
+                <input type="url" class="banner-variant-url" value="${escapeHtml(url)}"
                        placeholder="https://example.com/image.jpg?w=728&h=90"
                        style="flex:2; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
-                <input type="number" class="banner-variant-width" value="${width}"
+                <input type="number" class="banner-variant-width" value="${escapeHtml(width)}"
                        placeholder="Width" min="1"
                        style="flex:0 0 80px; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
-                <input type="number" class="banner-variant-height" value="${height}"
+                <input type="number" class="banner-variant-height" value="${escapeHtml(height)}"
                        placeholder="Height" min="1"
                        style="flex:0 0 80px; padding:6px 10px; border:1px solid #e5e5e5; border-radius:4px; font-size:0.875rem;" />
                 <button type="button" onclick="this.closest('.banner-variant-row').remove()"
@@ -2516,10 +2527,13 @@
 
         function updateBannerImagePreview(url) {
             const preview = document.getElementById('banner-image-preview');
+            preview.innerHTML = '';
             if (url && url.trim()) {
-                preview.innerHTML = `<img src="${url}" alt="Banner preview" style="max-width:100%; max-height:150px; border:1px solid #e5e5e5; border-radius:4px;">`;
-            } else {
-                preview.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = 'Banner preview';
+                img.style.cssText = 'max-width:100%; max-height:150px; border:1px solid #e5e5e5; border-radius:4px;';
+                preview.appendChild(img);
             }
         }
 
@@ -2558,13 +2572,13 @@
                     return;
                 }
 
-                // Render native ad preview with flexible fields
+                // Render native ad preview with flexible fields (escaped for security)
                 let previewHtml = '<div style="border:1px solid #e5e5e5; padding:16px; border-radius:4px;">';
-                if (data.title) previewHtml += `<div style="font-weight:600; font-size:1.125rem; margin-bottom:8px;">${data.title}</div>`;
-                if (data.image || data.image_url) previewHtml += `<img src="${data.image || data.image_url}" alt="" style="max-width:100%; margin-bottom:8px;">`;
-                if (data.description) previewHtml += `<p style="margin:8px 0;">${data.description}</p>`;
-                if (data.cta_text) previewHtml += `<button style="padding:8px 16px; background:#0a0a0a; color:white; border:none; border-radius:4px; cursor:pointer; margin-top:8px;">${data.cta_text}</button>`;
-                if (data.sponsored_by || data.brand) previewHtml += `<div style="font-size:0.75rem; color:#737373; margin-top:8px;">Sponsored by ${data.sponsored_by || data.brand}</div>`;
+                if (data.title) previewHtml += `<div style="font-weight:600; font-size:1.125rem; margin-bottom:8px;">${escapeHtml(data.title)}</div>`;
+                if (data.image || data.image_url) previewHtml += `<img src="${escapeHtml(data.image || data.image_url)}" alt="" style="max-width:100%; margin-bottom:8px;">`;
+                if (data.description) previewHtml += `<p style="margin:8px 0;">${escapeHtml(data.description)}</p>`;
+                if (data.cta_text) previewHtml += `<button style="padding:8px 16px; background:#0a0a0a; color:white; border:none; border-radius:4px; cursor:pointer; margin-top:8px;">${escapeHtml(data.cta_text)}</button>`;
+                if (data.sponsored_by || data.brand) previewHtml += `<div style="font-size:0.75rem; color:#737373; margin-top:8px;">Sponsored by ${escapeHtml(data.sponsored_by || data.brand)}</div>`;
                 previewHtml += '</div>';
                 preview.innerHTML = previewHtml;
             } else if (format === 'banner') {
@@ -2587,13 +2601,18 @@
                     }
                 });
 
+                // Create image element using DOM API (safer than innerHTML)
+                const img = document.createElement('img');
+                img.src = image;
+                img.alt = alt;
+                img.style.cssText = 'max-width:100%; display:block; border:1px solid #e5e5e5;';
+
                 // Build srcset if variants exist
-                let srcset = '';
                 if (variants.length > 0) {
-                    srcset = ` srcset="${variants.map(v => `${v.url} ${v.width}w`).join(', ')}"`;
+                    img.srcset = variants.map(v => `${v.url} ${v.width}w`).join(', ');
                 }
 
-                preview.innerHTML = `<img src="${image}" alt="${alt}"${srcset} style="max-width:100%; display:block; border:1px solid #e5e5e5;">`;
+                preview.appendChild(img);
             } else {
                 preview.textContent = 'Select format to preview';
             }
