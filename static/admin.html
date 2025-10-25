@@ -1588,7 +1588,7 @@
                 selects.forEach(select => {
                     select.innerHTML = '<option value="">Select Publisher</option>';
                     publishers.forEach(pub => {
-                        select.innerHTML += `<option value="${pub.id}">${pub.name}</option>`;
+                        select.innerHTML += `<option value="${escapeHtml(pub.id)}">${escapeHtml(pub.name)}</option>`;
                     });
                 });
             } catch (err) {
@@ -1610,7 +1610,7 @@
                 selects.forEach(select => {
                     select.innerHTML = '<option value="">Select Campaign</option>';
                     campaigns.forEach(campaign => {
-                        select.innerHTML += `<option value="${campaign.id}">${campaign.name}</option>`;
+                        select.innerHTML += `<option value="${escapeHtml(campaign.id)}">${escapeHtml(campaign.name)}</option>`;
                     });
                 });
             } catch (err) {
@@ -1627,7 +1627,7 @@
                 selects.forEach(select => {
                     select.innerHTML = '<option value="">Select Line Item</option>';
                     lineItems.forEach(item => {
-                        select.innerHTML += `<option value="${item.id}">${item.name}</option>`;
+                        select.innerHTML += `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`;
                     });
                 });
             } catch (err) {
@@ -1644,7 +1644,7 @@
                 selects.forEach(select => {
                     select.innerHTML = '<option value="">Select Placement</option>';
                     placements.forEach(placement => {
-                        select.innerHTML += `<option value="${placement.id}">${placement.id}</option>`;
+                        select.innerHTML += `<option value="${escapeHtml(placement.id)}">${escapeHtml(placement.id)}</option>`;
                     });
                 });
             } catch (err) {
@@ -2006,8 +2006,9 @@
                 }
 
                 if (!data || data.length === 0) {
-                    const publisherInfo = selectedGlobalPublisher ?
-                        ` for ${allPublishers.find(p => p.id === selectedGlobalPublisher)?.name || 'selected publisher'}` : '';
+                    const publisherName = selectedGlobalPublisher ?
+                        allPublishers.find(p => p.id === selectedGlobalPublisher)?.name || 'selected publisher' : '';
+                    const publisherInfo = publisherName ? ` for ${escapeHtml(publisherName)}` : '';
                     listDiv.innerHTML = `
                         <div class="empty-state">
                             <h3>No ${entityType} found${publisherInfo}</h3>
@@ -3102,19 +3103,19 @@
                     const priority = conflict.priority || 'N/A';
                     const conflictType = conflict.conflict_type || 'N/A';
                     const impact = conflict.estimated_impact_impressions || conflict.competing_opportunities || 0;
-                    
+
                     // Color code by conflict type
                     let rowColor = '';
                     if (conflictType === 'higher_priority') rowColor = 'background-color: #f8d7da;';
                     else if (conflictType === 'same_priority') rowColor = 'background-color: #fff3cd;';
                     else if (conflictType === 'lower_priority') rowColor = 'background-color: #d1ecf1;';
-                    
+
                     detailsHTML += `
                         <tr style="${rowColor}">
-                            <td><strong>${lineItemName}</strong></td>
-                            <td>${campaignName}</td>
-                            <td>${priority}</td>
-                            <td style="text-transform: capitalize;">${conflictType.replace(/_/g, ' ')}</td>
+                            <td><strong>${escapeHtml(lineItemName)}</strong></td>
+                            <td>${escapeHtml(campaignName)}</td>
+                            <td>${escapeHtml(String(priority))}</td>
+                            <td style="text-transform: capitalize;">${escapeHtml(conflictType.replace(/_/g, ' '))}</td>
                             <td>${impact > 0 && impact < 9223372036854775807 ? impact.toLocaleString() : 'Minimal'}</td>
                         </tr>
                     `;
