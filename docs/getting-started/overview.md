@@ -52,7 +52,7 @@ This ad server demonstrates core advertising technology concepts through working
 - Research framework for ad serving behavior and integration experiments
 
 **What this is NOT:**
-- Enterprise ad server optimized for massive scale
+- Production ad server optimized for massive scale
 - Complete solution for large publishers
 - Replacement for existing monetization platforms
 

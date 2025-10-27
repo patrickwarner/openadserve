@@ -41,8 +41,5 @@ RELOAD_INTERVAL=30s  # Auto-reload campaign data from PostgreSQL
 - Redis provides operational state persistence across restarts
 - Horizontal scaling not supported in this open source version
 
-**Enterprise Scaling:**
-Contact us for enterprise solutions that support:
-- Distributed data stores
-- Multi-instance deployments  
-- Real-time configuration synchronization
+**Need to Scale?**
+Planning a larger deployment? Reach out to discuss distributed data stores, multi-instance setups, and real-time config sync. Contact Patrick Warner via [email](mailto:patrick@openadserve.com) or [LinkedIn](https://www.linkedin.com/in/warnerpatrick).

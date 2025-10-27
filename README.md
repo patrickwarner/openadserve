@@ -87,14 +87,15 @@ Complete documentation is available in the [docs](docs/) folder:
 
 ## Known Limitations
 
-This is a single-instance ad server designed for learning and small to medium-scale deployments. Horizontal scaling requires enterprise solutions. For production scaling considerations, see [limitations.md](docs/getting-started/limitations.md) for detailed constraints.
+This is a single-instance ad server designed for learning and small to medium-scale deployments. Need help scaling beyond this? Reach out to discuss options. For production scaling considerations, see [limitations.md](docs/getting-started/limitations.md) for detailed constraints.
 
 ---
 
 ## Author
 
-**Patrick Warner** - Technical and product leader passionate about building ad tech that actually works for publishers. 
+**Patrick Warner** - Technical and product leader passionate about building ad tech that actually works for publishers.
 
+- Email: [patrick@openadserve.com](mailto:patrick@openadserve.com)
 - LinkedIn: [linkedin.com/in/warnerpatrick](https://www.linkedin.com/in/warnerpatrick)
 
 ---

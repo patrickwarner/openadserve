@@ -99,8 +99,8 @@ While this document focuses on limitations, this ad server provides:
 - **Real ad tech concepts** correctly implemented
 - **Extensible architecture** allowing gradual enhancement
 
-This implementation serves as an educational resource and foundation for small to medium-scale ad serving needs. 
+This implementation serves as an educational resource and foundation for small to medium-scale ad serving needs.
 
-## Enterprise Solutions
+## Need More?
 
-Many of these limitations are addressed in enterprise versions that include distributed data stores, advanced optimization algorithms, and horizontal scaling capabilities. For information about enterprise solutions and hosted services, contact Patrick Warner at [LinkedIn](https://www.linkedin.com/in/warnerpatrick).
+Planning to run this at serious scale or need features beyond what's included? Feel free to reach out—I'm happy to discuss custom solutions, hosting options, or enhancements that fit your specific needs. Contact Patrick Warner via [email](mailto:patrick@openadserve.com) or [LinkedIn](https://www.linkedin.com/in/warnerpatrick).
