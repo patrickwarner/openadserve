@@ -373,6 +373,29 @@
     </style>
   </head>
   <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="margin-bottom: 0;">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">Ad Demo</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+            <li class="nav-item"><a class="nav-link active" href="social-feed.html">Social Feed Demo</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
     <div class="social-container">
       <div class="social-header">
         <h1 class="h4 mb-2">📱 Native Ad Integration Demo</h1>
@@ -557,12 +580,11 @@
 
       // Set global custom parameters for social feed context
       // These parameters will be passed to ALL ad requests from this page
+      // Keeping under 10 total params to leave room for UTM parameters
       AdSDK.setCustomParams({
         platform: 'social_feed',
-        user_segment: 'engaged_social_user',
         content_type: 'lifestyle_feed',
-        page_depth: '1',
-        session_engagement: 'high'
+        user_segment: 'engaged'
       });
 
       // Auto-capture UTM parameters from page URL
@@ -573,20 +595,16 @@
       // Parameter priority: per-request > per-slot > global
       AdSDK.setAdSlotCustomParams('social_native_post', {
         ad_position: 'feed_position_3',
-        content_context: 'user_generated_content',
-        targeting_keywords: 'lifestyle,travel,food,fashion',
-        visibility_score: 'high',
-        placement_type: 'native_in_feed'
+        placement_type: 'native_in_feed',
+        keywords: 'lifestyle,travel,food'
       });
 
       // Set placement-specific custom parameters for skin takeover
       // These parameters enable rich attribution for premium brand campaigns
       AdSDK.setAdSlotCustomParams('social_skin_takeover', {
         ad_format: 'background_skin',
-        impact_level: 'high_impact',
-        targeting_keywords: 'premium_brands,luxury,exclusive',
-        frequency_cap: 'once_per_session',
-        placement_type: 'skin_takeover'
+        placement_type: 'skin_takeover',
+        keywords: 'premium_brands'
       });
 
       // When users click ads, these custom parameters will be expanded in URLs like:
@@ -663,5 +681,12 @@
         }
       });
     </script>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js"
+      integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
   </body>
 </html>
