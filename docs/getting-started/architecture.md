@@ -32,12 +32,12 @@ The server is a Go application that relies on a small set of external services:
 1. A client sends a `POST /ad` request in a minimal OpenRTB format.
 2. `GetAdHandler` parses the request, resolves the `TargetingContext` using the user agent and GeoIP lookup and records an `ad_request` analytics event.
 3. The pluggable `selectors.Selector` (by default `RuleBasedSelector`) receives the request parameters along with the in-memory `AdDataStore`.
-4. The selector applies a series of filters defined in `internal/logic/filters`:
+4. The selector applies an optimized single-pass filter defined in `internal/logic/filters`:
    - targeting checks (device, OS, browser, geo and custom key/values)
    - placement size and format checks
    - line item active state
    - rate limiting for direct line items (token bucket algorithm)
-   - frequency capping and dual-counter pacing using Redis (uses pipeline batching for efficiency)
+   - frequency capping and dual-counter pacing using Redis (uses efficient batch operations)
 5. For CPC line items with CTR optimization enabled, the system queries the CTR predictor service for context-aware click probability predictions and applies boost multipliers to eCPM calculations.
 6. Remaining candidates are ranked by priority and eCPM. Programmatic line items can fetch external bids concurrently.
 7. The winning creative is wrapped in an `OpenRTBResponse`. A signed token is generated via `internal/token` and embedded in the impression, click and event URLs.
@@ -127,7 +127,7 @@ graph TD
 
 **Request Flow:**
 
-1. **Ad Request** → Parse → GeoIP lookup → Selector (reads from AdDataStore) applies filters → Generate signed URLs → Return ad
+1. **Ad Request** → Parse → GeoIP lookup → Selector (reads from AdDataStore) applies optimized single-pass filters → Generate signed URLs → Return ad
 2. **Tracking** → Verify token → Record event in ClickHouse → Update Redis counters  
 3. **Reporting** → Verify token → Store report in PostgreSQL → Record analytics event
 4. **Data Sync** → Use `/reload` endpoint or automatic reloads via `RELOAD_INTERVAL`.
