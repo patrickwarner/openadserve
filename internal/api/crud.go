@@ -39,19 +39,20 @@ func (s *Server) CreatePublisher(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert into data store and PostgreSQL
+	// First persist to PostgreSQL to get the ID
+	if s.PG != nil {
+		if err := s.PG.InsertPublisher(&pub); err != nil {
+			s.Logger.Error("insert publisher to postgres", zap.Error(err))
+			http.Error(w, "failed to persist publisher", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Then insert into data store with the ID from PostgreSQL
 	if err := s.AdDataStore.InsertPublisher(&pub); err != nil {
 		s.Logger.Error("insert publisher to data store", zap.Error(err))
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
-	}
-
-	// Also persist to PostgreSQL for reporting/persistence
-	if s.PG != nil {
-		if err := s.PG.InsertPublisher(&pub); err != nil {
-			s.Logger.Error("insert publisher to postgres", zap.Error(err))
-			// Don't fail the request, data store is the source of truth
-		}
 	}
 
 	s.notifyUpdate("publisher", "create", pub.ID)
@@ -157,18 +158,20 @@ func (s *Server) CreateCampaign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert into data store
+	// First persist to PostgreSQL to get the ID
+	if s.PG != nil {
+		if err := s.PG.InsertCampaign(&c); err != nil {
+			s.Logger.Error("insert campaign to postgres", zap.Error(err))
+			http.Error(w, "failed to persist campaign", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Then insert into data store with the ID from PostgreSQL
 	if err := s.AdDataStore.InsertCampaign(&c); err != nil {
 		s.Logger.Error("insert campaign to data store", zap.Error(err))
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
-	}
-
-	// Also persist to PostgreSQL
-	if s.PG != nil {
-		if err := s.PG.InsertCampaign(&c); err != nil {
-			s.Logger.Error("insert campaign to postgres", zap.Error(err))
-		}
 	}
 
 	s.notifyUpdate("campaign", "create", c.ID)
