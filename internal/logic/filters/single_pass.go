@@ -105,13 +105,13 @@ func (spf *SinglePassFilter) applyRedisFilters(
 	// Batch frequency check
 	exceeded, err := logic.BatchFrequencyCheck(spf.store, userID, creativesForRedis, spf.dataStore)
 	if err != nil {
-		return nil, fmt.Errorf("batch frequency check failed: %w", err)
+		return nil, fmt.Errorf("batch frequency check failed for %d creatives: %w", len(creativesForRedis), err)
 	}
 
 	// Batch pacing check
 	eligible, err := logic.BatchPacingCheck(spf.store, creativesForRedis, spf.dataStore, spf.cfg)
 	if err != nil {
-		return nil, fmt.Errorf("batch pacing check failed: %w", err)
+		return nil, fmt.Errorf("batch pacing check failed for %d creatives: %w", len(creativesForRedis), err)
 	}
 
 	// Filter results based on Redis checks
