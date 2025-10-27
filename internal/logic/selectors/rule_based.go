@@ -34,7 +34,10 @@ var (
 	ErrUnknownPlacement   = errors.New("unknown placement")
 )
 
-const defaultProgrammaticBidTimeout = 800 * time.Millisecond
+const (
+	defaultProgrammaticBidTimeout = 800 * time.Millisecond
+	defaultCTRPredictionTimeout   = 100 * time.Millisecond
+)
 
 var defaultCTROptimizationEnabled = func() bool {
 	v := os.Getenv("CTR_OPTIMIZATION_ENABLED")
@@ -191,7 +194,7 @@ func (s *RuleBasedSelector) calculateOptimizedECPM(li *models.LineItem, ctx mode
 		}
 
 		// Get prediction with short timeout to avoid blocking ad serving
-		predictionCtx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		predictionCtx, cancel := context.WithTimeout(context.Background(), defaultCTRPredictionTimeout)
 		defer cancel()
 
 		prediction, err := s.ctrClient.GetPrediction(predictionCtx, predictionReq)

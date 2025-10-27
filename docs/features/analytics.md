@@ -121,7 +121,7 @@ AND event_type IN ('impression', 'click')
 
 ## Filter Performance Metrics
 
-The ad server provides comprehensive metrics for monitoring filter performance and the optimized single-pass filtering system:
+The ad server provides metrics for monitoring filter performance:
 
 ### Filter Duration Tracking
 ```
@@ -153,23 +153,4 @@ adserver_filter_stage_creatives{stage}
 
 Tracks the number of creatives remaining after filtering stages:
 - **`stage`**: "filtered" (final count after all filters applied)
-
-### Performance Monitoring
-
-Monitor these key metrics for filter performance:
-- **Sub-millisecond filtering**: Most requests should complete filtering in <1ms for small datasets
-- **Consistent performance**: Filter duration should scale predictably with creative count
-- **Low error rates**: Filter errors should be <0.1% of requests
-
-### Expected Performance Baselines
-
-Based on the optimized single-pass implementation:
-
-| Creative Count | Expected Duration | Alert Threshold |
-|----------------|------------------|------------------|
-| 1-10 | ~1.5ms | >5ms |
-| 11-50 | ~6ms | >20ms |
-| 51-100 | ~13ms | >40ms |
-| 101-500 | ~70ms | >200ms |
-| 501+ | ~145ms | >400ms |
 
