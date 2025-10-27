@@ -377,18 +377,20 @@ func (s *Server) CreateLineItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert into data store
+	// First persist to PostgreSQL to get the ID
+	if s.PG != nil {
+		if err := s.PG.InsertLineItem(&li); err != nil {
+			s.Logger.Error("insert line item to postgres", zap.Error(err))
+			http.Error(w, "failed to persist line item", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Then insert into data store with the ID from PostgreSQL
 	if err := s.AdDataStore.InsertLineItem(&li); err != nil {
 		s.Logger.Error("insert line item to data store", zap.Error(err))
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
-	}
-
-	// Also persist to PostgreSQL
-	if s.PG != nil {
-		if err := s.PG.InsertLineItem(&li); err != nil {
-			s.Logger.Error("insert line item to postgres", zap.Error(err))
-		}
 	}
 
 	s.notifyUpdate("line_item", "create", li.ID)
