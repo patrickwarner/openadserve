@@ -119,3 +119,38 @@ AND line_item_id IS NOT NULL
 AND event_type IN ('impression', 'click')
 ```
 
+## Filter Performance Metrics
+
+The ad server provides metrics for monitoring filter performance:
+
+### Filter Duration Tracking
+```
+adserver_filter_duration_seconds{creative_count_bucket, result}
+```
+
+Measures the time spent in filter operations with labels:
+- **`creative_count_bucket`**: Creative dataset size ("1-10", "11-50", "51-100", "101-500", "501-1000", "1000+")
+- **`result`**: Filter outcome ("success", "no_eligible", "pacing_limit", "error")
+
+Example Prometheus queries:
+```promql
+# Average filter duration by creative count
+avg by (creative_count_bucket) (
+  rate(adserver_filter_duration_seconds_sum[5m]) / 
+  rate(adserver_filter_duration_seconds_count[5m])
+)
+
+# P95 filter latency
+histogram_quantile(0.95,
+  sum by (le) (rate(adserver_filter_duration_seconds_bucket[5m]))
+)
+```
+
+### Filter Stage Counts
+```
+adserver_filter_stage_creatives{stage}
+```
+
+Tracks the number of creatives remaining after filtering stages:
+- **`stage`**: "filtered" (final count after all filters applied)
+

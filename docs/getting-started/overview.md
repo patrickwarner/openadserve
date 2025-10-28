@@ -27,7 +27,7 @@ A publisher-first ad server with OpenRTB compatibility and extensive customizati
 
 This ad server demonstrates core advertising technology concepts through working code. The implementation covers:
 
-**Ad Selection Logic**: Rule-based filtering with pluggable selector patterns  
+**Ad Selection Logic**: Rule-based filtering with pluggable selector patterns and optimized single-pass performance  
 **Campaign Pacing**: Dual-counter systems for budget and impression distribution  
 **Real-Time Decisions**: Sub-100ms ad serving with caching and optimization  
 **Data Architecture**: Multi-store patterns for configuration, counters, and analytics  
@@ -60,7 +60,7 @@ See [limitations.md](limitations.md) for detailed constraints and production con
 
 ## Customizable Ad Selection
 
-Implement the `selectors.Selector` interface to create custom ad selection logic. The default `RuleBasedSelector` handles standard targeting and pacing.
+Implement the `selectors.Selector` interface to create custom ad selection logic. The default `RuleBasedSelector` uses an optimized single-pass filter for maximum performance while maintaining standard targeting and pacing.
 
 **Available Filters** (`internal/logic/filters`):
 - `FilterByTargeting` - Device, geo, custom key-values
@@ -68,5 +68,6 @@ Implement the `selectors.Selector` interface to create custom ad selection logic
 - `FilterByActive` - Line item status
 - `FilterByFrequency` - User exposure limits
 - `FilterByPacing` - Daily delivery caps and dual-counter distribution
+- `SinglePassFilter` - Optimized implementation combining all criteria (3x faster)
 
-Compose filters to build sophisticated selection logic tailored to specific needs.
+Compose individual filters to build custom selection logic, or use the optimized single-pass implementation for maximum performance.

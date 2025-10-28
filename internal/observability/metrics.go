@@ -119,6 +119,35 @@ var (
 			Buckets: prometheus.LinearBuckets(0, 0.1, 21),
 		},
 	)
+
+	// Filter duration for ad selection
+	FilterDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "adserver_filter_duration_seconds",
+			Help: "Duration of filter operations in ad selection",
+			Buckets: []float64{
+				0.0001, // 100μs
+				0.0005, // 500μs
+				0.001,  // 1ms
+				0.002,  // 2ms
+				0.005,  // 5ms
+				0.01,   // 10ms
+				0.02,   // 20ms
+				0.05,   // 50ms
+				0.1,    // 100ms
+			},
+		},
+		[]string{"creative_count_bucket", "result"},
+	)
+
+	// Number of creatives filtered at each stage
+	FilterStageCount = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "adserver_filter_stage_creatives",
+			Help: "Number of creatives remaining after each filter stage",
+		},
+		[]string{"stage"},
+	)
 )
 
 func init() {
@@ -137,5 +166,25 @@ func init() {
 		CTRPredictionRequests,
 		CTRPredictionLatency,
 		CTRBoostMultiplier,
+		FilterDuration,
+		FilterStageCount,
 	)
+}
+
+// GetCreativeCountBucket returns a bucket label for the number of creatives
+func GetCreativeCountBucket(count int) string {
+	switch {
+	case count <= 10:
+		return "1-10"
+	case count <= 50:
+		return "11-50"
+	case count <= 100:
+		return "51-100"
+	case count <= 500:
+		return "101-500"
+	case count <= 1000:
+		return "501-1000"
+	default:
+		return "1000+"
+	}
 }

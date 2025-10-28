@@ -21,6 +21,7 @@ import (
 	"github.com/patrickwarner/openadserve/internal/logic/ratelimit"
 	"github.com/patrickwarner/openadserve/internal/logic/render"
 	"github.com/patrickwarner/openadserve/internal/models"
+	"github.com/patrickwarner/openadserve/internal/observability"
 	"github.com/patrickwarner/openadserve/internal/optimization"
 
 	"go.uber.org/zap"
@@ -33,7 +34,10 @@ var (
 	ErrUnknownPlacement   = errors.New("unknown placement")
 )
 
-const defaultProgrammaticBidTimeout = 800 * time.Millisecond
+const (
+	defaultProgrammaticBidTimeout = 800 * time.Millisecond
+	defaultCTRPredictionTimeout   = 100 * time.Millisecond
+)
 
 var defaultCTROptimizationEnabled = func() bool {
 	v := os.Getenv("CTR_OPTIMIZATION_ENABLED")
@@ -190,7 +194,7 @@ func (s *RuleBasedSelector) calculateOptimizedECPM(li *models.LineItem, ctx mode
 		}
 
 		// Get prediction with short timeout to avoid blocking ad serving
-		predictionCtx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		predictionCtx, cancel := context.WithTimeout(context.Background(), defaultCTRPredictionTimeout)
 		defer cancel()
 
 		prediction, err := s.ctrClient.GetPrediction(predictionCtx, predictionReq)
@@ -249,7 +253,7 @@ func (s *RuleBasedSelector) SelectAdWithTrace(store *db.RedisStore, database *db
 // performSelection contains the core selection logic used by SelectAd and SelectAdWithTrace.
 func (s *RuleBasedSelector) performSelection(store *db.RedisStore, database *db.DB, dataStore models.AdDataStore, placementID, userID string,
 	width, height int, ctx models.TargetingContext, trace *logic.SelectionTrace, cfg config.Config) (*models.AdResponse, error) {
-	// Resolve placement and dimensions. Width/height may be passed as zero to use defaults.
+	// Resolve placement and dimensions
 	placement, ok := database.GetPlacement(placementID)
 	if !ok {
 		return nil, ErrUnknownPlacement
@@ -262,46 +266,78 @@ func (s *RuleBasedSelector) performSelection(store *db.RedisStore, database *db.
 		height = placement.Height
 	}
 
-	// Initial creative pool for this placement.
+	// Initial creative pool for this placement
 	creatives := database.FindCreativesForPlacement(placementID)
+	initialCount := len(creatives)
+	creativeCountBucket := observability.GetCreativeCountBucket(initialCount)
+
 	if trace != nil {
 		trace.AddStep("start", creatives)
 	}
 
-	// Basic targeting and size checks.
-	creatives = filters.FilterByTargeting(creatives, ctx, dataStore)
+	// Apply optimized single-pass filtering
+	filterStart := time.Now()
+	spFilter := filters.NewSinglePassFilter(store, dataStore, cfg)
+	var err error
 	if trace != nil {
-		trace.AddStep("targeting", creatives)
-	}
-	creatives = filters.FilterBySize(creatives, width, height, placement.Formats)
-	if trace != nil {
-		trace.AddStep("size", creatives)
+		creatives, err = spFilter.FilterCreativesWithTrace(
+			context.Background(),
+			creatives,
+			ctx,
+			width,
+			height,
+			placement.Formats,
+			userID,
+			trace,
+		)
+	} else {
+		creatives, err = spFilter.FilterCreatives(
+			context.Background(),
+			creatives,
+			ctx,
+			width,
+			height,
+			placement.Formats,
+			userID,
+		)
 	}
 
-	// Enforce optional rate limiting before expensive operations.
+	// Record filter performance metrics
+	filterDuration := time.Since(filterStart).Seconds()
+	result := "success"
+	if err != nil {
+		if err == filters.ErrPacingLimitReached {
+			result = "pacing_limit"
+			observability.FilterDuration.WithLabelValues(creativeCountBucket, result).Observe(filterDuration)
+			return nil, ErrPacingLimitReached
+		}
+		result = "error"
+		observability.FilterDuration.WithLabelValues(creativeCountBucket, result).Observe(filterDuration)
+		return nil, err
+	} else if len(creatives) == 0 {
+		result = "no_eligible"
+	}
+
+	observability.FilterDuration.WithLabelValues(creativeCountBucket, result).Observe(filterDuration)
+	observability.FilterStageCount.WithLabelValues("filtered").Set(float64(len(creatives)))
+
+	// Apply rate limiting
 	creatives = s.applyRateLimit(creatives, dataStore, trace)
 
-	// Apply frequency capping and pacing rules.
-	var err error
-	creatives, err = s.applyFrequencyAndPacing(store, creatives, userID, dataStore, trace, cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	// Gather bids for programmatic line items.
+	// Gather programmatic bids
 	bids := s.fetchProgrammaticBids(creatives, width, height)
 
-	// Drop creatives that received no bid.
+	// Drop creatives that received no bid
 	creatives = s.filterCreativesByBid(creatives, bids)
 
 	if len(creatives) == 0 {
 		return nil, ErrNoEligibleAd
 	}
 
-	// Order creatives by priority and eCPM.
+	// Rank creatives by priority and eCPM
 	creatives = s.rankCreatives(creatives, ctx, bids, trace)
 
-	// Build the final ad response using the highest ranked creative.
+	// Return the highest ranked creative
 	return s.buildAdResponse(creatives[0], ctx, bids), nil
 }
 
@@ -327,33 +363,6 @@ func (s *RuleBasedSelector) applyRateLimit(creatives []models.Creative, dataStor
 		trace.AddStep("ratelimit", allowed)
 	}
 	return allowed
-}
-
-// applyFrequencyAndPacing enforces frequency caps and pacing rules. It also handles
-// tracing of these steps when requested.
-func (s *RuleBasedSelector) applyFrequencyAndPacing(store *db.RedisStore, creatives []models.Creative,
-	userID string, dataStore models.AdDataStore, trace *logic.SelectionTrace, cfg config.Config) ([]models.Creative, error) {
-	var err error
-	creatives, err = filters.FilterByFrequency(store, creatives, userID, dataStore)
-	if err != nil {
-		return nil, err
-	}
-	if trace != nil {
-		trace.AddStep("frequency", creatives)
-	}
-
-	if trace != nil {
-		// Enhanced tracing for pacing
-		var details map[string]string
-		creatives, details, err = filters.FilterByPacingWithTrace(store, creatives, dataStore, cfg)
-		trace.AddStepWithDetails("pacing", creatives, details)
-	} else {
-		creatives, err = filters.FilterByPacing(store, creatives, dataStore, cfg)
-	}
-	if err == filters.ErrPacingLimitReached {
-		return nil, ErrPacingLimitReached
-	}
-	return creatives, err
 }
 
 // fetchProgrammaticBids requests bids for all programmatic line items in the given
