@@ -44,15 +44,16 @@ func (m *MockAdDataStore) GetCampaign(campaignID int) *models.Campaign {
 	return nil
 }
 
-func (m *MockAdDataStore) GetPublisher(publisherID int) *models.Publisher    { return nil }
-func (m *MockAdDataStore) GetPlacement(placementID string) *models.Placement { return nil }
-func (m *MockAdDataStore) GetLineItemByID(lineItemID int) *models.LineItem   { return nil }
-func (m *MockAdDataStore) GetAllPublishers() []models.Publisher              { return nil }
-func (m *MockAdDataStore) GetAllPublisherIDs() []int                         { return nil }
-func (m *MockAdDataStore) GetAllCampaigns() []models.Campaign                { return m.campaigns }
-func (m *MockAdDataStore) GetAllLineItems() []models.LineItem                { return m.lineItems }
-func (m *MockAdDataStore) GetAllPlacements() []models.Placement              { return nil }
-func (m *MockAdDataStore) SetLineItems(items []models.LineItem) error        { return nil }
+func (m *MockAdDataStore) GetPublisher(publisherID int) *models.Publisher              { return nil }
+func (m *MockAdDataStore) GetPlacement(placementID string) *models.Placement           { return nil }
+func (m *MockAdDataStore) GetPlacementsByPublisher(publisherID int) []models.Placement { return nil }
+func (m *MockAdDataStore) GetLineItemByID(lineItemID int) *models.LineItem             { return nil }
+func (m *MockAdDataStore) GetAllPublishers() []models.Publisher                        { return nil }
+func (m *MockAdDataStore) GetAllPublisherIDs() []int                                   { return nil }
+func (m *MockAdDataStore) GetAllCampaigns() []models.Campaign                          { return m.campaigns }
+func (m *MockAdDataStore) GetAllLineItems() []models.LineItem                          { return m.lineItems }
+func (m *MockAdDataStore) GetAllPlacements() []models.Placement                        { return nil }
+func (m *MockAdDataStore) SetLineItems(items []models.LineItem) error                  { return nil }
 func (m *MockAdDataStore) SetLineItemsForPublisher(publisherID int, items []models.LineItem) error {
 	return nil
 }
