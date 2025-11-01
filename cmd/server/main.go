@@ -170,13 +170,13 @@ func run(logger *zap.Logger, cfg config.Config) error {
 	r.HandleFunc("/click", srvDeps.ClickHandler).Methods("GET")
 	r.HandleFunc("/event", srvDeps.EventHandler).Methods("GET")
 	r.HandleFunc("/report", srvDeps.ReportHandler).Methods("POST")
-	r.HandleFunc("/forecast", srvDeps.ForecastHandler).Methods("POST")
 	r.HandleFunc("/health", srvDeps.HealthHandler).Methods("GET")
 	r.HandleFunc("/reload", srvDeps.ReloadHandler).Methods("POST")
 	r.HandleFunc("/test/bid", srvDeps.TestBidHandler).Methods("POST")
 
 	// CRUD routes for admin UI
 	crud := r.PathPrefix("/api").Subrouter()
+	crud.HandleFunc("/forecast", srvDeps.ForecastHandler).Methods("POST")
 	crud.HandleFunc("/publishers", srvDeps.ListPublishers).Methods("GET")
 	crud.HandleFunc("/publishers", srvDeps.CreatePublisher).Methods("POST")
 	crud.HandleFunc("/publishers/{id}", srvDeps.UpdatePublisher).Methods("PUT")
