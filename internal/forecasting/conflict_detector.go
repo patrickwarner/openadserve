@@ -2,6 +2,7 @@ package forecasting
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -37,12 +38,10 @@ func (e *Engine) detectConflicts(ctx context.Context, req *models.ForecastReques
 		// Priority index 0 = highest priority, 1 = second highest, etc.
 		// Example: req.Priority=0 -> "high" -> rank 0, req.Priority=1 -> "medium" -> rank 1
 
-		// Validate priority index and log warning if invalid
+		// Validate priority index - return error for invalid input to fail fast
 		if !models.ValidatePriorityIndex(req.Priority) {
-			e.Logger.Warn("invalid priority index in forecast request",
-				zap.Int("priority_index", req.Priority),
-				zap.Int("max_valid_index", len(models.PriorityOrder)-1),
-			)
+			return nil, fmt.Errorf("invalid priority index %d, must be 0-%d",
+				req.Priority, len(models.PriorityOrder)-1)
 		}
 
 		reqPriorityString := models.PriorityFromIndex(req.Priority)
