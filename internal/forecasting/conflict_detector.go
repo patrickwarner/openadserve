@@ -36,12 +36,21 @@ func (e *Engine) detectConflicts(ctx context.Context, req *models.ForecastReques
 		// This approach works with any configured priority system (default: ["high", "medium", "low"])
 		// Priority index 0 = highest priority, 1 = second highest, etc.
 		// Example: req.Priority=0 -> "high" -> rank 0, req.Priority=1 -> "medium" -> rank 1
-		requestPriorityString := models.PriorityFromIndex(req.Priority)
-		reqRank := models.PriorityRank(requestPriorityString)
 
-		if liRank < reqRank {
+		// Validate priority index and log warning if invalid
+		if !models.ValidatePriorityIndex(req.Priority) {
+			e.Logger.Warn("invalid priority index in forecast request",
+				zap.Int("priority_index", req.Priority),
+				zap.Int("max_valid_index", len(models.PriorityOrder)-1),
+			)
+		}
+
+		reqPriorityString := models.PriorityFromIndex(req.Priority)
+		reqPriorityRank := models.PriorityRank(reqPriorityString)
+
+		if liRank < reqPriorityRank {
 			conflictType = "higher_priority"
-		} else if liRank > reqRank {
+		} else if liRank > reqPriorityRank {
 			conflictType = "lower_priority"
 		}
 
