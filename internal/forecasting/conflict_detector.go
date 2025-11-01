@@ -32,24 +32,12 @@ func (e *Engine) detectConflicts(ctx context.Context, req *models.ForecastReques
 		conflictType := "same_priority"
 		liRank := models.PriorityRank(li.Priority)
 
-		// Convert numeric priority from request to string priority, then to rank
-		var reqRank int
-		if req.Priority > 0 {
-			// Convert numeric priority to string priority then get rank
-			switch req.Priority {
-			case 1:
-				reqRank = models.PriorityRank(models.PriorityHigh) // rank 0
-			case 2:
-				reqRank = models.PriorityRank(models.PriorityMedium) // rank 1
-			case 3:
-				reqRank = models.PriorityRank(models.PriorityLow) // rank 2
-			default:
-				reqRank = models.PriorityRank(models.PriorityLow) // default to lowest priority
-			}
-		} else {
-			// Default to high priority if not specified
-			reqRank = models.PriorityRank(models.PriorityHigh)
-		}
+		// Convert numeric priority index from request to priority string, then to rank
+		// This approach works with any configured priority system (default: ["high", "medium", "low"])
+		// Priority index 0 = highest priority, 1 = second highest, etc.
+		// Example: req.Priority=0 -> "high" -> rank 0, req.Priority=1 -> "medium" -> rank 1
+		requestPriorityString := models.PriorityFromIndex(req.Priority)
+		reqRank := models.PriorityRank(requestPriorityString)
 
 		if liRank < reqRank {
 			conflictType = "higher_priority"
@@ -69,7 +57,7 @@ func (e *Engine) detectConflicts(ctx context.Context, req *models.ForecastReques
 			LineItemName:      li.Name,
 			CampaignID:        li.CampaignID,
 			CampaignName:      campaignName,
-			Priority:          liRank, // Use numeric rank instead of string
+			Priority:          models.PriorityToIndex(li.Priority), // Convert to index for consistent UI display
 			OverlapPercentage: overlapPct,
 			ConflictType:      conflictType,
 		}

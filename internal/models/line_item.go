@@ -171,6 +171,35 @@ func PriorityRank(p string) int {
 	return len(PriorityOrder) // Rank unrecognized priorities last.
 }
 
+// PriorityFromIndex converts a zero-based priority index to the corresponding priority string.
+// Index 0 = highest priority (first in PriorityOrder), Index 1 = second priority, etc.
+// Invalid indices return the lowest configured priority.
+// This enables robust conversion between numeric UI values and priority strings.
+func PriorityFromIndex(index int) string {
+	if index < 0 || index >= len(PriorityOrder) {
+		// Return lowest priority for out-of-range values
+		return PriorityOrder[len(PriorityOrder)-1]
+	}
+	return PriorityOrder[index]
+}
+
+// PriorityToIndex converts a priority string to its zero-based index in PriorityOrder.
+// Returns the index if found, or len(PriorityOrder) for unrecognized priorities.
+// This is useful for UI display where priorities are shown as indexed lists.
+func PriorityToIndex(priority string) int {
+	for i, p := range PriorityOrder {
+		if p == priority {
+			return i
+		}
+	}
+	return len(PriorityOrder) // Unrecognized priority gets lowest index
+}
+
+// ValidatePriorityIndex checks if a priority index is valid for the current configuration.
+func ValidatePriorityIndex(index int) bool {
+	return index >= 0 && index < len(PriorityOrder)
+}
+
 // GetLineItem returns a LineItem for a given publisher and ID.
 // This function delegates to the AdDataStore for thread-safe access.
 func GetLineItem(store AdDataStore, pubID, id int) *LineItem {
