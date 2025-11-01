@@ -264,6 +264,28 @@ func (s *Server) ListPlacements(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, ps)
 }
 
+func (s *Server) ListPlacementsByPublisher(w http.ResponseWriter, r *http.Request) {
+	if s.AdDataStore == nil {
+		http.Error(w, "data store unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	publisherIDStr := mux.Vars(r)["id"]
+	publisherID, err := strconv.Atoi(publisherIDStr)
+	if err != nil {
+		http.Error(w, "invalid publisher id", http.StatusBadRequest)
+		return
+	}
+
+	// Use in-memory store for consistency with ListPlacements
+	placements := s.AdDataStore.GetPlacementsByPublisher(publisherID)
+	if placements == nil {
+		placements = []models.Placement{}
+	}
+
+	writeJSON(w, placements)
+}
+
 func (s *Server) CreatePlacement(w http.ResponseWriter, r *http.Request) {
 	if s.AdDataStore == nil {
 		http.Error(w, "data store unavailable", http.StatusInternalServerError)
@@ -366,6 +388,28 @@ func (s *Server) ListLineItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items := s.AdDataStore.GetAllLineItems()
+	writeJSON(w, items)
+}
+
+func (s *Server) ListLineItemsByPublisher(w http.ResponseWriter, r *http.Request) {
+	if s.AdDataStore == nil {
+		http.Error(w, "data store unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	publisherIDStr := mux.Vars(r)["id"]
+	publisherID, err := strconv.Atoi(publisherIDStr)
+	if err != nil {
+		http.Error(w, "invalid publisher id", http.StatusBadRequest)
+		return
+	}
+
+	// Use in-memory store for consistency with ListLineItems
+	items := s.AdDataStore.GetLineItemsByPublisher(publisherID)
+	if items == nil {
+		items = []models.LineItem{}
+	}
+
 	writeJSON(w, items)
 }
 

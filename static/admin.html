@@ -1199,7 +1199,7 @@
                 <h2>Create Creative</h2>
                 <form onsubmit="createEntity('creatives', event)">
                     <div class="form-grid">
-                        <select name="placement_id" required>
+                        <select name="placement_id" required onchange="filterFormatsByPlacement(this)">
                             <option value="">Select Placement</option>
                         </select>
                         <select name="line_item_id" required>
@@ -1207,9 +1207,6 @@
                         </select>
                         <select name="format" required onchange="updateCreativeContentFields(this)">
                             <option value="">Select Format</option>
-                            <option value="html">HTML</option>
-                            <option value="native">Native</option>
-                            <option value="banner">Banner</option>
                         </select>
 
                         <!-- HTML Format Fields -->
@@ -1620,9 +1617,15 @@
 
         async function populateLineItemDropdown(tabName) {
             try {
-                const response = await fetch('/api/line_items');
+                // Use publisher-filtered endpoint if global publisher is selected
+                let url = '/api/line_items';
+                if (tabName === 'creatives' && selectedGlobalPublisher) {
+                    url = `/api/publishers/${selectedGlobalPublisher}/line_items`;
+                }
+
+                const response = await fetch(url);
                 const lineItems = await response.json();
-                
+
                 const selects = document.querySelectorAll(`#${tabName} select[name="line_item_id"]`);
                 selects.forEach(select => {
                     select.innerHTML = '<option value="">Select Line Item</option>';
@@ -1637,9 +1640,20 @@
 
         async function populatePlacementDropdown(tabName) {
             try {
-                const response = await fetch('/api/placements');
+                // Use publisher-filtered endpoint if global publisher is selected
+                let url = '/api/placements';
+                if (tabName === 'creatives' && selectedGlobalPublisher) {
+                    url = `/api/publishers/${selectedGlobalPublisher}/placements`;
+                }
+
+                const response = await fetch(url);
                 const placements = await response.json();
-                
+
+                // Store placement data for format filtering
+                if (tabName === 'creatives') {
+                    window.creativePlacementsData = placements;
+                }
+
                 const selects = document.querySelectorAll(`#${tabName} select[name="placement_id"]`);
                 selects.forEach(select => {
                     select.innerHTML = '<option value="">Select Placement</option>';
@@ -1790,6 +1804,12 @@
                 if (tabName !== 'forecasting') {
                     loadEntities(tabName);
                 }
+
+                // Reload creatives dropdowns if on creatives tab
+                if (tabName === 'creatives') {
+                    populateLineItemDropdown('creatives');
+                    populatePlacementDropdown('creatives');
+                }
             }
 
             // Update form dropdowns
@@ -1808,6 +1828,12 @@
                 const tabName = activeTab.textContent.toLowerCase().replace(' ', '_');
                 if (tabName !== 'forecasting') {
                     loadEntities(tabName);
+                }
+
+                // Reload creatives dropdowns if on creatives tab
+                if (tabName === 'creatives') {
+                    populateLineItemDropdown('creatives');
+                    populatePlacementDropdown('creatives');
                 }
             }
 
@@ -2383,6 +2409,50 @@
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+        }
+
+        // Filter format dropdown based on selected placement's allowed formats
+        function filterFormatsByPlacement(placementSelect) {
+            const placementId = placementSelect.value;
+            const formatSelect = placementSelect.closest('form').querySelector('select[name="format"]');
+
+            if (!placementId || !window.creativePlacementsData) {
+                // Reset to all formats if no placement selected
+                formatSelect.innerHTML = '<option value="">Select Format</option>' +
+                    '<option value="html">HTML</option>' +
+                    '<option value="native">Native</option>' +
+                    '<option value="banner">Banner</option>';
+                return;
+            }
+
+            // Find the selected placement
+            const placement = window.creativePlacementsData.find(p => p.id === placementId);
+            if (!placement || !placement.formats || placement.formats.length === 0) {
+                // If no formats specified, allow all
+                formatSelect.innerHTML = '<option value="">Select Format</option>' +
+                    '<option value="html">HTML</option>' +
+                    '<option value="native">Native</option>' +
+                    '<option value="banner">Banner</option>';
+                return;
+            }
+
+            // Filter formats based on placement's allowed formats
+            const allowedFormats = placement.formats;
+            let options = '<option value="">Select Format</option>';
+
+            const formatLabels = {
+                'html': 'HTML',
+                'native': 'Native',
+                'banner': 'Banner'
+            };
+
+            allowedFormats.forEach(format => {
+                if (formatLabels[format]) {
+                    options += `<option value="${escapeHtml(format)}">${escapeHtml(formatLabels[format])}</option>`;
+                }
+            });
+
+            formatSelect.innerHTML = options;
         }
 
         // Format-specific field management

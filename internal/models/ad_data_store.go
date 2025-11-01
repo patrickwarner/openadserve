@@ -17,6 +17,7 @@ type AdDataStore interface {
 	GetCampaign(campaignID int) *Campaign
 	GetPublisher(publisherID int) *Publisher
 	GetPlacement(placementID string) *Placement
+	GetPlacementsByPublisher(publisherID int) []Placement
 	GetLineItemByID(lineItemID int) *LineItem // For backward compatibility
 
 	// Iteration methods
@@ -147,6 +148,18 @@ func (s *InMemoryAdDataStore) GetPlacement(placementID string) *Placement {
 		return placement
 	}
 	return nil
+}
+
+// GetPlacementsByPublisher returns all placements for a publisher
+func (s *InMemoryAdDataStore) GetPlacementsByPublisher(publisherID int) []Placement {
+	data := s.data.Load()
+	result := make([]Placement, 0)
+	for _, placement := range data.placements {
+		if placement.PublisherID == publisherID {
+			result = append(result, placement)
+		}
+	}
+	return result
 }
 
 // GetLineItemByID searches for a line item across all publishers (backward compatibility)

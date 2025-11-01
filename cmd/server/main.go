@@ -181,6 +181,8 @@ func run(logger *zap.Logger, cfg config.Config) error {
 	crud.HandleFunc("/publishers", srvDeps.CreatePublisher).Methods("POST")
 	crud.HandleFunc("/publishers/{id}", srvDeps.UpdatePublisher).Methods("PUT")
 	crud.HandleFunc("/publishers/{id}", srvDeps.DeletePublisher).Methods("DELETE")
+	crud.HandleFunc("/publishers/{id}/line_items", srvDeps.ListLineItemsByPublisher).Methods("GET")
+	crud.HandleFunc("/publishers/{id}/placements", srvDeps.ListPlacementsByPublisher).Methods("GET")
 
 	crud.HandleFunc("/campaigns", srvDeps.ListCampaigns).Methods("GET")
 	crud.HandleFunc("/campaigns", srvDeps.CreateCampaign).Methods("POST")
