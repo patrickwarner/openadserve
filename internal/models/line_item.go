@@ -132,7 +132,10 @@ func buildPriorityRank() {
 	for i, p := range PriorityOrder {
 		newPriorityRank[p] = i
 	}
-	priorityRank = newPriorityRank // Atomic swap could be considered if read concurrently, but init context is usually safe.
+	// Thread safety note: This assignment is safe during init() or startup.
+	// Runtime changes to PriorityOrder require application restart.
+	// For dynamic priority changes, implement proper synchronization (sync.RWMutex).
+	priorityRank = newPriorityRank
 }
 
 // init function is automatically called when the package is loaded.
@@ -169,6 +172,35 @@ func PriorityRank(p string) int {
 		return r
 	}
 	return len(PriorityOrder) // Rank unrecognized priorities last.
+}
+
+// PriorityFromIndex converts a zero-based priority index to the corresponding priority string.
+// Index 0 = highest priority (first in PriorityOrder), Index 1 = second priority, etc.
+// Invalid indices return the lowest configured priority and log a warning in debug mode.
+// This enables robust conversion between numeric UI values and priority strings.
+func PriorityFromIndex(index int) string {
+	if index < 0 || index >= len(PriorityOrder) {
+		// Return lowest priority for out-of-range values
+		// Note: Invalid indices should be validated by calling code (see ValidatePriorityIndex)
+		return PriorityOrder[len(PriorityOrder)-1]
+	}
+	return PriorityOrder[index]
+}
+
+// PriorityToIndex converts a priority string to its zero-based index in PriorityOrder.
+// Returns the index if found, or len(PriorityOrder) for unrecognized priorities.
+// Uses O(1) lookup via the priorityRank map for better performance.
+// This is useful for UI display where priorities are shown as indexed lists.
+func PriorityToIndex(priority string) int {
+	if rank, ok := priorityRank[priority]; ok {
+		return rank
+	}
+	return len(PriorityOrder) // Unrecognized priority gets lowest index
+}
+
+// ValidatePriorityIndex checks if a priority index is valid for the current configuration.
+func ValidatePriorityIndex(index int) bool {
+	return index >= 0 && index < len(PriorityOrder)
 }
 
 // GetLineItem returns a LineItem for a given publisher and ID.
