@@ -56,15 +56,38 @@ type EventRecord struct {
 
 // InitClickHouse connects to ClickHouse and ensures the events table exists.
 // pg may be nil if spend persistence is not needed.
-func InitClickHouse(dsn string, pg *db.Postgres, metrics observability.MetricsRegistry) (*Analytics, error) {
+func InitClickHouse(dsn string, pg *db.Postgres, metrics observability.MetricsRegistry,
+	maxOpenConns, maxIdleConns int, connMaxLifetime, connMaxIdleTime time.Duration) (*Analytics, error) {
 	db, err := sql.Open("clickhouse", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("clickhouse open: %w", err)
 	}
-	db.SetMaxOpenConns(25)
+
+	// Validate connection pool configuration
+	if maxIdleConns > maxOpenConns {
+		return nil, fmt.Errorf("clickhouse pool: max_idle_conns (%d) cannot exceed max_open_conns (%d)",
+			maxIdleConns, maxOpenConns)
+	}
+	if maxOpenConns <= 0 || maxIdleConns < 0 {
+		return nil, fmt.Errorf("clickhouse pool: invalid connection counts (max_open: %d, max_idle: %d)",
+			maxOpenConns, maxIdleConns)
+	}
+
+	// Configure connection pooling to prevent connection leaks
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(connMaxLifetime)
+	db.SetConnMaxIdleTime(connMaxIdleTime)
+
 	if err := db.PingContext(context.Background()); err != nil {
 		return nil, fmt.Errorf("clickhouse ping: %w", err)
 	}
+
+	zap.L().Info("Connected to ClickHouse with connection pooling",
+		zap.Int("max_open_conns", maxOpenConns),
+		zap.Int("max_idle_conns", maxIdleConns),
+		zap.Duration("conn_max_lifetime", connMaxLifetime),
+		zap.Duration("conn_max_idle_time", connMaxIdleTime))
 	create := `CREATE TABLE IF NOT EXISTS events (
        timestamp    DateTime,
        event_type   String,

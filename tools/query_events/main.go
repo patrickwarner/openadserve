@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/patrickwarner/openadserve/internal/analytics"
 	"github.com/patrickwarner/openadserve/internal/config"
@@ -34,7 +35,7 @@ func main() {
 		dsn = cfg.ClickHouseDSN
 	}
 
-	a, err := analytics.InitClickHouse(dsn, nil, observability.NewNoOpRegistry())
+	a, err := analytics.InitClickHouse(dsn, nil, observability.NewNoOpRegistry(), 10, 2, 5*time.Minute, 1*time.Minute)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "connect clickhouse: %v\n", err)
 		os.Exit(1)

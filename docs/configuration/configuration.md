@@ -13,6 +13,16 @@ This document explains how to configure the ad server, including environment var
 | `REDIS_ADDR` | `localhost:6379` | Redis connection string for operational counters |
 | `CLICKHOUSE_DSN` | `clickhouse://default:@localhost:9000/default?async_insert=1&wait_for_async_insert=1` | ClickHouse connection string with async inserts |
 | `POSTGRES_DSN` | `postgres://postgres@127.0.0.1:5432/postgres?sslmode=disable` | PostgreSQL connection string |
+| **Database Connection Pooling** | | |
+| `DB_MAX_OPEN_CONNS` | `25` | Maximum PostgreSQL connections |
+| `DB_MAX_IDLE_CONNS` | `5` | Maximum idle PostgreSQL connections |
+| `DB_CONN_MAX_LIFETIME` | `5m` | PostgreSQL connection max lifetime |
+| `DB_CONN_MAX_IDLE_TIME` | `1m` | PostgreSQL connection max idle time |
+| `CH_MAX_OPEN_CONNS` | `100` | Maximum ClickHouse connections |
+| `CH_MAX_IDLE_CONNS` | `25` | Maximum idle ClickHouse connections |
+| `CH_CONN_MAX_LIFETIME` | `5m` | ClickHouse connection max lifetime |
+| `CH_CONN_MAX_IDLE_TIME` | `1m` | ClickHouse connection max idle time |
+| **Other Settings** | | |
 | `GEOIP_DB` | `data/GeoLite2-Country.mmdb` | GeoIP database path |
 | `DEBUG_TRACE` | `false` | Enable debug tracing for ad selection |
 | `ENV` | `production` | Environment type (development, staging, production) |

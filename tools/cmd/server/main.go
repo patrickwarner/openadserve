@@ -51,7 +51,7 @@ func run(logger *zap.Logger, cfg config.Config) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	pg, err := db.InitPostgres(cfg.PostgresDSN, cfg.DBMaxOpenConns, cfg.DBMaxIdleConns, cfg.DBConnMaxLifetime)
+	pg, err := db.InitPostgres(cfg.PostgresDSN, cfg.DBMaxOpenConns, cfg.DBMaxIdleConns, cfg.DBConnMaxLifetime, cfg.DBConnMaxIdleTime)
 	if err != nil {
 		return fmt.Errorf("failed to connect postgres: %w", err)
 	}
@@ -102,7 +102,7 @@ func run(logger *zap.Logger, cfg config.Config) error {
 	// Initialize metrics registry
 	metricsRegistry := observability.NewPrometheusRegistry()
 
-	analyticsSvc, err := analytics.InitClickHouse(cfg.ClickHouseDSN, pg, metricsRegistry)
+	analyticsSvc, err := analytics.InitClickHouse(cfg.ClickHouseDSN, pg, metricsRegistry, cfg.CHMaxOpenConns, cfg.CHMaxIdleConns, cfg.CHConnMaxLifetime, cfg.CHConnMaxIdleTime)
 	if err != nil {
 		return fmt.Errorf("failed to connect clickhouse: %w", err)
 	}

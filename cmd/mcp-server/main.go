@@ -445,7 +445,7 @@ func main() {
 	}
 
 	// Initialize database connection
-	pg, err := db.InitPostgres(postgresURL, 10, 5, 30*time.Minute)
+	pg, err := db.InitPostgres(postgresURL, 10, 5, 30*time.Minute, 5*time.Minute)
 	if err != nil {
 		logger.Fatal("Failed to connect to PostgreSQL", zap.Error(err))
 	}
@@ -475,13 +475,22 @@ func main() {
 		logger.Warn("Failed to connect to ClickHouse, forecasting will use defaults", zap.Error(err))
 		clickhouseDB = nil
 	} else {
-		clickhouseDB.SetMaxOpenConns(25)
+		// Configure connection pooling to prevent connection leaks
+		// MCP server has lower load than main server, so use smaller pool
+		clickhouseDB.SetMaxOpenConns(25)                 // Maximum number of open connections
+		clickhouseDB.SetMaxIdleConns(5)                  // Maximum number of idle connections to retain
+		clickhouseDB.SetConnMaxLifetime(5 * time.Minute) // Maximum lifetime of a connection
+		clickhouseDB.SetConnMaxIdleTime(1 * time.Minute) // Maximum idle time before closing connection
 		if err := clickhouseDB.PingContext(context.Background()); err != nil {
 			logger.Warn("ClickHouse ping failed, forecasting will use defaults", zap.Error(err))
 			_ = clickhouseDB.Close()
 			clickhouseDB = nil
 		} else {
-			logger.Info("ClickHouse connected successfully for forecasting")
+			logger.Info("ClickHouse connected successfully for forecasting",
+				zap.Int("max_open_conns", 25),
+				zap.Int("max_idle_conns", 5),
+				zap.Duration("conn_max_lifetime", 5*time.Minute),
+				zap.Duration("conn_max_idle_time", 1*time.Minute))
 			defer func() { _ = clickhouseDB.Close() }()
 		}
 	}
