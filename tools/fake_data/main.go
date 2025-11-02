@@ -41,7 +41,7 @@ func main() {
 	defer func() { _ = logger.Sync() }()
 
 	cfg := config.Load()
-	pg, err := db.InitPostgres(cfg.PostgresDSN, cfg.DBMaxOpenConns, cfg.DBMaxIdleConns, cfg.DBConnMaxLifetime)
+	pg, err := db.InitPostgres(cfg.PostgresDSN, cfg.DBMaxOpenConns, cfg.DBMaxIdleConns, cfg.DBConnMaxLifetime, cfg.DBConnMaxIdleTime)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "connect postgres: %v\n", err)
 		os.Exit(1)

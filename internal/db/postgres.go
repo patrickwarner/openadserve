@@ -122,7 +122,7 @@ CREATE INDEX IF NOT EXISTS idx_placements_publisher_id ON placements (publisher_
 `
 
 // InitPostgres connects to Postgres with connection pooling configuration.
-func InitPostgres(dsn string, maxOpenConns, maxIdleConns int, connMaxLifetime time.Duration) (*Postgres, error) {
+func InitPostgres(dsn string, maxOpenConns, maxIdleConns int, connMaxLifetime, connMaxIdleTime time.Duration) (*Postgres, error) {
 	// Register the otelsql wrapper for postgres
 	driverName, err := otelsql.Register("postgres",
 		otelsql.WithAttributes(
@@ -143,6 +143,7 @@ func InitPostgres(dsn string, maxOpenConns, maxIdleConns int, connMaxLifetime ti
 	db.SetMaxOpenConns(maxOpenConns)       // Maximum number of open connections
 	db.SetMaxIdleConns(maxIdleConns)       // Maximum number of idle connections
 	db.SetConnMaxLifetime(connMaxLifetime) // Maximum lifetime of a connection
+	db.SetConnMaxIdleTime(connMaxIdleTime) // Maximum idle time before closing connection
 
 	if err := db.PingContext(context.Background()); err != nil {
 		return nil, fmt.Errorf("postgres ping: %w", err)

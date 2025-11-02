@@ -36,6 +36,12 @@ type Config struct {
 	DBMaxOpenConns    int
 	DBMaxIdleConns    int
 	DBConnMaxLifetime time.Duration
+	DBConnMaxIdleTime time.Duration
+	// ClickHouse connection pooling configuration
+	CHMaxOpenConns    int
+	CHMaxIdleConns    int
+	CHConnMaxLifetime time.Duration
+	CHConnMaxIdleTime time.Duration
 	// Tracing configuration
 	TracingEnabled    bool
 	TempoEndpoint     string
@@ -78,6 +84,14 @@ func Load() Config {
 	cfg.DBMaxOpenConns = envInt("DB_MAX_OPEN_CONNS", 25)
 	cfg.DBMaxIdleConns = envInt("DB_MAX_IDLE_CONNS", 5)
 	cfg.DBConnMaxLifetime = envDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute)
+	cfg.DBConnMaxIdleTime = envDuration("DB_CONN_MAX_IDLE_TIME", 1*time.Minute)
+
+	// ClickHouse connection pooling configuration
+	// Default to higher values than PostgreSQL due to async insert patterns and high event volume
+	cfg.CHMaxOpenConns = envInt("CH_MAX_OPEN_CONNS", 100)
+	cfg.CHMaxIdleConns = envInt("CH_MAX_IDLE_CONNS", 25)
+	cfg.CHConnMaxLifetime = envDuration("CH_CONN_MAX_LIFETIME", 5*time.Minute)
+	cfg.CHConnMaxIdleTime = envDuration("CH_CONN_MAX_IDLE_TIME", 1*time.Minute)
 
 	// Tracing configuration
 	cfg.TracingEnabled = envBool("TRACING_ENABLED", false)
