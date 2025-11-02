@@ -97,6 +97,57 @@ func validateForecastRequest(req *models.ForecastRequest) error {
 	return nil
 }
 
+// calculatePreemptableInventory determines how much inventory can be preempted from lower-priority line items
+func (e *Engine) calculatePreemptableInventory(req *models.ForecastRequest, conflicts []models.ConflictingLineItem, totalOpportunities int64) int64 {
+	var preemptableImpressions int64
+
+	reqPriorityString := models.PriorityFromIndex(req.Priority)
+	_ = models.PriorityRank(reqPriorityString) // Reserved for future priority-based preemption logic
+
+	// Calculate inventory that can be preempted from lower priority conflicts
+	for _, conflict := range conflicts {
+		if conflict.ConflictType == "lower_priority" {
+			// Get the actual line item to check its current delivery
+			lineItem := e.AdStore.GetLineItemByID(conflict.LineItemID)
+			if lineItem == nil {
+				continue
+			}
+
+			// Calculate how much this line item is currently expected to deliver
+			// based on its overlap with our request and current delivery pace
+			remainingBudget := lineItem.BudgetAmount - lineItem.Spend
+			if remainingBudget <= 0 {
+				continue // Line item is already exhausted
+			}
+
+			// Estimate current delivery rate for this line item
+			var currentImpressions int64
+			if lineItem.CPM > 0 {
+				// For CPM line items, calculate impressions from remaining budget
+				currentImpressions = int64(remainingBudget / lineItem.CPM * 1000)
+			} else {
+				// For other budget types, use a conservative estimate
+				currentImpressions = int64(float64(totalOpportunities) * conflict.OverlapPercentage * 0.3)
+			}
+
+			// We can preempt a percentage of this line item's delivery based on overlap
+			// Higher overlap means more potential preemption
+			preemptionRate := conflict.OverlapPercentage * 0.8 // Conservative preemption rate
+			preemptableFromThisConflict := int64(float64(currentImpressions) * preemptionRate)
+
+			preemptableImpressions += preemptableFromThisConflict
+		}
+	}
+
+	e.Logger.Info("calculated preemptable inventory",
+		zap.Int64("preemptable_impressions", preemptableImpressions),
+		zap.Int("lower_priority_conflicts", len(conflicts)),
+		zap.Int("request_priority", req.Priority),
+	)
+
+	return preemptableImpressions
+}
+
 // buildForecastResponse assembles the final forecast response
 func (e *Engine) buildForecastResponse(req *models.ForecastRequest, patterns []*TrafficPattern, inventory *InventoryAvailability, conflicts []models.ConflictingLineItem) *models.ForecastResponse {
 	response := &models.ForecastResponse{
@@ -107,6 +158,11 @@ func (e *Engine) buildForecastResponse(req *models.ForecastRequest, patterns []*
 		DailyForecast:        make([]models.DailyForecast, 0),
 		Warnings:             make([]string, 0),
 	}
+
+	// Apply priority-based conflict resolution to increase available inventory
+	preemptableImpressions := e.calculatePreemptableInventory(req, conflicts, inventory.TotalOpportunities)
+	response.AvailableImpressions += preemptableImpressions
+	response.EstimatedImpressions = response.AvailableImpressions
 
 	// Calculate estimated spend and CTR
 	switch req.BudgetType {

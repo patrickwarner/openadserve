@@ -99,16 +99,16 @@ func (e *Engine) calculateAvailableInventory(ctx context.Context, req *models.Fo
 		current = current.AddDate(0, 0, 1)
 	}
 
-	// Calculate available impressions (unfilled inventory)
-	// This represents the opportunity that's not currently monetized
+	// Calculate available impressions considering both unfilled inventory and potential preemption
 	currentFillRate := inventory.FillRate
+	baseAvailable := int64(float64(inventory.TotalOpportunities) * (1 - currentFillRate))
+
 	if currentFillRate > 0.95 {
-		// If fill rate is very high, assume limited availability
-		inventory.AvailableImpressions = int64(float64(inventory.TotalOpportunities) * 0.05)
-	} else {
-		// Available = unfilled opportunities
-		inventory.AvailableImpressions = int64(float64(inventory.TotalOpportunities) * (1 - currentFillRate))
+		// If fill rate is very high, base availability is limited
+		baseAvailable = int64(float64(inventory.TotalOpportunities) * 0.05)
 	}
+
+	inventory.AvailableImpressions = baseAvailable
 
 	// Initial estimate before conflict resolution
 	inventory.EstimatedImpressions = inventory.AvailableImpressions

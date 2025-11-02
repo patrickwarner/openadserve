@@ -3,12 +3,29 @@ package forecasting
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/patrickwarner/openadserve/internal/models"
 )
+
+// DefaultECPMConflictThreshold is the default eCPM difference threshold for conflict determination
+// A 10% difference is used to account for CTR prediction variance and market dynamics
+const DefaultECPMConflictThreshold = 1.1
+
+// getECPMConflictThreshold returns the configurable eCPM threshold from environment
+// or the default value. Threshold determines when same-priority bids are considered conflicts.
+func getECPMConflictThreshold() float64 {
+	if thresholdStr := os.Getenv("ECPM_CONFLICT_THRESHOLD"); thresholdStr != "" {
+		if threshold, err := strconv.ParseFloat(thresholdStr, 64); err == nil && threshold > 1.0 {
+			return threshold
+		}
+	}
+	return DefaultECPMConflictThreshold
+}
 
 // detectConflicts identifies line items that compete for the same inventory
 func (e *Engine) detectConflicts(ctx context.Context, req *models.ForecastRequest) ([]models.ConflictingLineItem, error) {
@@ -51,6 +68,20 @@ func (e *Engine) detectConflicts(ctx context.Context, req *models.ForecastReques
 			conflictType = "higher_priority"
 		} else if liRank > reqPriorityRank {
 			conflictType = "lower_priority"
+		} else {
+			// Same priority - check if bid difference resolves the conflict
+			reqECPM := e.calculateForecastECPM(req)
+			liECPM := e.calculateLineItemECPM(&li)
+			threshold := getECPMConflictThreshold()
+
+			// If our bid is significantly higher, this isn't really a conflict
+			if reqECPM > liECPM*threshold {
+				continue // Skip this "conflict" - we would clearly win
+			}
+			// If conflicting line item's bid is significantly higher, we would clearly lose
+			if liECPM > reqECPM*threshold {
+				conflictType = "higher_priority" // Treat as effective higher priority
+			}
 		}
 
 		// Get campaign for name
@@ -70,19 +101,62 @@ func (e *Engine) detectConflicts(ctx context.Context, req *models.ForecastReques
 			ConflictType:      conflictType,
 		}
 
-		// Estimate impact based on priority and remaining budget
+		// Estimate impact based on priority and bid competition
+		reqECPM := e.calculateForecastECPM(req)
+		liECPM := e.calculateLineItemECPM(&li)
+
 		switch conflictType {
 		case "higher_priority":
-			// Higher priority items will take inventory first
+			// Higher priority items (or same priority with higher bids) will take inventory first
 			remainingBudget := li.BudgetAmount - li.Spend
-			if remainingBudget > 0 && req.CPM > 0 {
-				// Rough estimate: higher priority could take significant inventory
-				conflict.EstimatedImpact = int64(overlapPct * 0.7 * float64(req.Budget/req.CPM*1000))
+			if remainingBudget > 0 {
+				// Calculate potential impressions from remaining budget
+				var potentialImpressions int64
+				if li.CPM > 0 {
+					potentialImpressions = int64(remainingBudget / li.CPM * 1000)
+				} else if reqECPM > 0 {
+					// Use our eCPM as proxy for impression estimation
+					potentialImpressions = int64(remainingBudget / reqECPM * 1000)
+				}
+
+				// Impact is based on overlap and competitive strength
+				impactRate := overlapPct * 0.7 // Base impact rate
+				// Increase impact if they have significantly higher eCPM
+				if liECPM > reqECPM*1.2 {
+					impactRate = overlapPct * 0.9 // Very high impact
+				}
+
+				conflict.EstimatedImpact = int64(impactRate * float64(potentialImpressions))
 			}
 		case "lower_priority":
-			// We might steal from lower priority items
+			// We might preempt lower priority items, but impact depends on bid difference
 			if li.CPM > 0 {
-				conflict.EstimatedImpact = int64(overlapPct * 0.3 * float64(li.BudgetAmount/li.CPM*1000))
+				remainingImpressions := int64(li.BudgetAmount / li.CPM * 1000)
+				preemptionRate := overlapPct * 0.3 // Base preemption rate
+
+				// Increase preemption if we have significantly higher eCPM
+				if reqECPM > liECPM*1.2 {
+					preemptionRate = overlapPct * 0.8 // High preemption
+				} else if reqECPM > liECPM*1.05 {
+					preemptionRate = overlapPct * 0.5 // Moderate preemption
+				}
+
+				conflict.EstimatedImpact = int64(preemptionRate * float64(remainingImpressions))
+			}
+		case "same_priority":
+			// For truly competitive same-priority conflicts, impact is based on bid ratio
+			remainingBudget := li.BudgetAmount - li.Spend
+			if remainingBudget > 0 && li.CPM > 0 {
+				remainingImpressions := int64(remainingBudget / li.CPM * 1000)
+
+				// Market share based on eCPM ratio
+				totalECPM := reqECPM + liECPM
+				if totalECPM > 0 {
+					// Our share of the contested inventory
+					ourShare := reqECPM / totalECPM
+					// Impact is the portion they would take from us
+					conflict.EstimatedImpact = int64(overlapPct * (1 - ourShare) * float64(remainingImpressions))
+				}
 			}
 		}
 
@@ -229,4 +303,42 @@ func calculateKeyValueOverlap(liKV, reqKV map[string]string) float64 {
 
 	// Return percentage of matching KVs
 	return float64(matches) / float64(total)
+}
+
+// calculateForecastECPM calculates the eCPM for a forecast request
+// Supports only CPM and CPC budget types for simplicity
+func (e *Engine) calculateForecastECPM(req *models.ForecastRequest) float64 {
+	switch req.BudgetType {
+	case models.BudgetTypeCPM:
+		// For CPM campaigns, eCPM is the CPM bid
+		return req.CPM
+	case models.BudgetTypeCPC:
+		// For CPC campaigns, estimate eCPM using baseline CTR
+		// Use 1% baseline CTR for consistent eCPM calculation
+		avgCTR := 0.01                 // 1% baseline
+		return req.CPC * avgCTR * 1000 // Convert to per-mille basis
+	default:
+		return 0.0
+	}
+}
+
+// calculateLineItemECPM calculates the eCPM for an existing line item
+// Supports only CPM and CPC budget types for simplicity
+func (e *Engine) calculateLineItemECPM(li *models.LineItem) float64 {
+	if li == nil {
+		return 0.0
+	}
+
+	// Calculate eCPM based on budget type
+	switch li.BudgetType {
+	case models.BudgetTypeCPM:
+		return li.CPM
+	case models.BudgetTypeCPC:
+		// Use baseline CTR for existing line items
+		// In production, this could use historical performance data
+		avgCTR := 0.01 // 1% baseline CTR
+		return li.CPC * avgCTR * 1000
+	default:
+		return 0.0
+	}
 }
